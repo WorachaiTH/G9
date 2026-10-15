@@ -7,6 +7,24 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<nav id="app-nav" class="navbar" hidden>
+  <div class="nav-container">
+    <div class="nav-brand">
+      <img class="nav-logo" src="../frontend/image/logo.PNG" alt="Lost and Found">
+      <span>Lost & Found</span>
+    </div>
+    <div class="nav-menu">
+      <button type="button" class="nav-link active" id="navHome">หน้าหลัก</button>
+      <button type="button" class="nav-link" id="navAdd">＋ เพิ่มโพสต์</button>
+    </div>
+    <div class="nav-user">
+      <span id="who" class="user-email"></span>
+      <button id="logout" class="logout-btn" type="button">ออกจากระบบ</button>
+    </div>
+  </div>
+</nav>
+
 <div class="wrap">
 
 <div id="login" class="lg">
@@ -30,7 +48,6 @@
 </div>
 
 <div id="home" data-tab="lost" hidden>
-<div class="ubar"><span id="who"></span><button id="logout" type="button">ออกจากระบบ</button></div>
 <h1>ศูนย์ของหาย–ของเจอ</h1>
 <p class="sub">ดูรายการแจ้งของหายและของที่มีคนเจอ หรือเพิ่มโพสต์ของคุณ</p>
 <div class="toast" id="toast" hidden>โพสต์ของคุณถูกเพิ่มแล้ว</div>

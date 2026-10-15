@@ -24,14 +24,16 @@ const posts = [];
 function postCard(p, index) {
   const isLost = p.type === 'lost';
   const cover = p.img
-    ? `<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:cover">`
+    ? `<img src="${p.img}" alt="">`
     : `<svg viewBox="0 0 24 24">${ICONS[p.icon || 'bag']}</svg>`;
 
   return `
     <div class="card post">
       <div class="ph">${cover}</div>
       <div class="pb">
-        <p><b>${esc(p.desc)}</b></p>
+        <div class="post-desc-bg">
+          <p><b>${esc(p.desc)}</b></p>
+        </div>
         <div class="meta">${isLost ? 'หายที่' : 'พบที่'}: ${esc(p.place)}</div>
         <div class="meta">เวลา: ${p.time}</div>
         <button class="ct" data-i="${index}">${isLost ? 'ติดต่อเจ้าของ' : 'ติดต่อผู้พบ'}</button>
@@ -61,8 +63,13 @@ function render() {
 }
 
 function show(view) {
-  $('login').hidden = view !== 'login';
-  $('home').hidden = view !== 'home';$('form').hidden = view !== 'form';
+  $('login').hidden = view !== 'login';$('home').hidden = view !== 'home';
+  $('form').hidden = view !== 'form';$('app-nav').hidden = view === 'login';
+
+  if ($('navHome') &&$('navAdd')) {
+    $('navHome').classList.toggle('active', view === 'home');$('navAdd').classList.toggle('active', view === 'form');
+  }
+
   window.scrollTo(0, 0);
 }
 
@@ -186,13 +193,11 @@ $('loginBtn').onclick = login;
 });
 $('em').onblur = () => ($('em').value =$('em').value.trim().toLowerCase());
 
-// ตรวจสอบและแสดงข้อความเตือนเมื่อพิมพ์ภาษาไทยหรืออักขระพิเศษ แต่ไม่ตัดข้อความทิ้ง
 $('pw').oninput = (e) => {
   const hasInvalidChar = /[^a-zA-Z0-9]/.test(e.target.value);
   $('ePw').textContent = hasInvalidChar ? 'กรุณาใช้ภาษาอังกฤษและตัวเลขเท่านั้น' : '';
 };
 
-// ฟังก์ชันกดดู/ซ่อนรหัสผ่าน พร้อมสลับไอคอนตาเปิด/ปิด
 $('eye').onclick = () => {
   const pw = $('pw');
   const isPassword = pw.type === 'password';
@@ -207,7 +212,16 @@ $('forgot').onclick = (e) => {
   e.preventDefault();
   showLoginMessage('ฟีเจอร์นี้ต้องเชื่อมระบบของมหาวิทยาลัยจริง (เวอร์ชันตัวอย่างยังไม่รองรับ)');
 };
-$('logout').onclick = () => {$('em').value = ''; show('login'); };
+
+$('logout').onclick = () => {$('em').value = ''; 
+  show('login'); 
+};
+
+$('navHome').onclick = () => show('home');
+$('navAdd').onclick = () => {$('toast').hidden = true; 
+  setType(tab); 
+  show('form');
+};
 
 $('tL').onclick = () => setTab('lost');$('tF').onclick = () => setTab('found');
 $('add').onclick = () => {$('toast').hidden = true; setType(tab); show('form'); };
