@@ -10,14 +10,19 @@
 <div class="wrap">
 
 <div id="login" class="lg">
-<div class="lg-hero"><div><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 5 5"/></svg><span>lost and found</span></div></div>
 <div class="lg-form">
+<img class="lg-banner" src="../frontend/image/logo.PNG" alt="Lost and Found">
 <div class="toast" id="lgmsg" hidden></div>
 <label for="em">อีเมลมหาวิทยาลัย</label>
 <div class="fld"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 8 8 6 8-6"/></svg><input id="em" type="text" inputmode="email" autocomplete="username" autocapitalize="none" placeholder="xxx@dome.tu.ac.th"></div>
 <div class="err" id="eEm"></div>
-<div class="row"><label for="pw">รหัสผ่าน</label><a href="#" id="forgot">ลืมรหัสผ่าน?</a></div>
-<div class="fld"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><input id="pw" type="password" autocomplete="current-password" placeholder="••••••••"><button type="button" id="eye" aria-label="แสดงรหัสผ่าน"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+<div class="row"><label for="pw">รหัสผ่าน (ใช้ภาษาอังกฤษและตัวเลขเท่านั้น)</label><a href="#" id="forgot">ลืมรหัสผ่าน?</a></div>
+<div class="fld">
+  <input id="pw" type="password" autocomplete="current-password" placeholder="••••••••">
+  <button type="button" id="eye" aria-label="แสดงรหัสผ่าน">
+    <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+</div>
 <div class="err" id="ePw"></div>
 <button class="btn" id="loginBtn" type="button">เข้าสู่ระบบ</button>
 <div class="hint" style="text-align:center;margin-top:14px">ใช้ได้เฉพาะอีเมล @dome.tu.ac.th เท่านั้น</div>

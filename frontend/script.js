@@ -19,9 +19,7 @@ let photo = null;
 let type = 'lost';
 let tab = 'lost';
 
-const posts = [
-  
-];
+const posts = [];
 
 function postCard(p, index) {
   const isLost = p.type === 'lost';
@@ -64,16 +62,14 @@ function render() {
 
 function show(view) {
   $('login').hidden = view !== 'login';
-  $('home').hidden = view !== 'home';
-  $('form').hidden = view !== 'form';
+  $('home').hidden = view !== 'home';$('form').hidden = view !== 'form';
   window.scrollTo(0, 0);
 }
 
 function setTab(t) {
   tab = t;
   $('home').dataset.tab = t;
-  $('tL').className = t === 'lost' ? 'on l' : '';
-  $('tF').className = t === 'found' ? 'on' : '';
+  $('tL').className = t === 'lost' ? 'on l' : '';$('tF').className = t === 'found' ? 'on' : '';
 }
 
 function setType(t) {
@@ -91,8 +87,7 @@ function setType(t) {
 
 function resetForm() {
   photo = null;
-  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));
-  $('prev').hidden = true;
+  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));$('prev').hidden = true;
   $('drop').hidden = false;
   ['eImg', 'eDesc', 'eLoc', 'eName', 'eTel'].forEach((id) => ($(id).textContent = ''));
 }
@@ -169,7 +164,11 @@ function login() {
   let emailError = '';
   if (!email) emailError = 'กรุณากรอกอีเมล';
   else if (!ALLOWED_EMAIL.test(email)) emailError = 'ใช้ได้เฉพาะอีเมล @dome.tu.ac.th เท่านั้น';
-  const passwordError = password ? '' : 'กรุณากรอกรหัสผ่าน';
+  
+  const hasInvalidChar = /[^a-zA-Z0-9]/.test(password);
+  let passwordError = '';
+  if (!password) passwordError = 'กรุณากรอกรหัสผ่าน';
+  else if (hasInvalidChar) passwordError = 'รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น';
 
   $('eEm').textContent = emailError;
   $('ePw').textContent = passwordError;
@@ -185,26 +184,37 @@ $('loginBtn').onclick = login;
 ['em', 'pw'].forEach((id) => {
   $(id).onkeydown = (e) => { if (e.key === 'Enter') login(); };
 });
-$('em').onblur = () => ($('em').value = $('em').value.trim().toLowerCase());
-$('eye').onclick = () => {
-  $('pw').type = $('pw').type === 'password' ? 'text' : 'password';
+$('em').onblur = () => ($('em').value =$('em').value.trim().toLowerCase());
+
+// ตรวจสอบและแสดงข้อความเตือนเมื่อพิมพ์ภาษาไทยหรืออักขระพิเศษ แต่ไม่ตัดข้อความทิ้ง
+$('pw').oninput = (e) => {
+  const hasInvalidChar = /[^a-zA-Z0-9]/.test(e.target.value);
+  $('ePw').textContent = hasInvalidChar ? 'กรุณาใช้ภาษาอังกฤษและตัวเลขเท่านั้น' : '';
 };
+
+// ฟังก์ชันกดดู/ซ่อนรหัสผ่าน พร้อมสลับไอคอนตาเปิด/ปิด
+$('eye').onclick = () => {
+  const pw = $('pw');
+  const isPassword = pw.type === 'password';
+  pw.type = isPassword ? 'text' : 'password';
+  
+  $('eye').innerHTML = isPassword
+    ? '<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>' 
+    : '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+};
+
 $('forgot').onclick = (e) => {
   e.preventDefault();
   showLoginMessage('ฟีเจอร์นี้ต้องเชื่อมระบบของมหาวิทยาลัยจริง (เวอร์ชันตัวอย่างยังไม่รองรับ)');
 };
-$('logout').onclick = () => { $('em').value = ''; show('login'); };
+$('logout').onclick = () => {$('em').value = ''; show('login'); };
 
-$('tL').onclick = () => setTab('lost');
-$('tF').onclick = () => setTab('found');
-$('add').onclick = () => { $('toast').hidden = true; setType(tab); show('form'); };
+$('tL').onclick = () => setTab('lost');$('tF').onclick = () => setTab('found');
+$('add').onclick = () => {$('toast').hidden = true; setType(tab); show('form'); };
 
 $('sL').onclick = () => setType('lost');
-$('sF').onclick = () => setType('found');
-$('back').onclick = () => { resetForm(); show('home'); };
-$('drop').onclick = $('rm').onclick = () => $('file').click();
-$('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); };
-$('file').onchange = handleImage;
+$('sF').onclick = () => setType('found');$('back').onclick = () => { resetForm(); show('home'); };
+$('drop').onclick =$('rm').onclick = () => $('file').click();$('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); };$('file').onchange = handleImage;
 $('post').onclick = submitPost;
 
 render();

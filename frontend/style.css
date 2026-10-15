@@ -245,38 +245,12 @@ textarea {
   color: var(--found-tx);
 }
 
-.lg-hero {
-  background: var(--soft);
-  border-radius: 20px;
-  height: 210px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.lg-hero svg {
-  width: 56px;
-  height: 56px;
-  stroke: var(--pri-ink);
-  fill: none;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.lg-hero b {
+.lg-banner {
+  width: 80%;
+  max-height: 180px;
+  object-fit: contain;
   display: block;
-  font-size: 1.15rem;
-  margin-top: 8px;
-}
-
-.lg-hero span {
-  display: block;
-  margin-top: 10px;
-  font-size: .85rem;
-  color: var(--mut);
+  margin: 0 auto 18px;
 }
 
 .fld {
@@ -507,17 +481,9 @@ textarea {
     display: none;
   }
   .lg {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: center;
-    max-width: 960px;
+    display: block;
+    max-width: 520px;
     margin: 40px auto 0;
-  }
-  .lg-hero {
-    height: 100%;
-    min-height: 500px;
-    margin: 0;
   }
   .lg-form {
     background: var(--card);
