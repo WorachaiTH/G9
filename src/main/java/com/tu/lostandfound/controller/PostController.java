@@ -31,10 +31,16 @@ public class PostController {
     private static final String UPLOAD_DIR = "uploads/";
 
     @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<Post> createPostWithImages(
+    public ResponseEntity<?> createPostWithImages(
             @RequestPart("post") Post post,
             @RequestPart(value = "images", required = false) MultipartFile[] images) {
         
+        if (post.getTitle() == null || post.getTitle().trim().isEmpty() ||
+            post.getLocation() == null || post.getLocation().trim().isEmpty() ||
+            post.getContactInfo() == null || post.getContactInfo().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Error: กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน");
+        }
+
         Post savedPost = postRepository.save(post);
 
         if (images != null && images.length > 0) {
