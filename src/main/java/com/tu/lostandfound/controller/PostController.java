@@ -29,6 +29,7 @@ public class PostController {
     private PostImageRepository postImageRepository;
 
     private static final String UPLOAD_DIR = "uploads/";
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<?> createPostWithImages(
@@ -39,6 +40,18 @@ public class PostController {
             post.getLocation() == null || post.getLocation().trim().isEmpty() ||
             post.getContactInfo() == null || post.getContactInfo().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Error: กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน");
+        }
+
+        if (images != null && images.length > 0) {
+            for (MultipartFile file : images) {
+                if (file.getSize() > MAX_FILE_SIZE) {
+                    return ResponseEntity.badRequest().body("Error: ขนาดไฟล์รูปภาพเกินกำหนด (สูงสุด 5MB)");
+                }
+                String contentType = file.getContentType();
+                if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/jpg"))) {
+                    return ResponseEntity.badRequest().body("Error: รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG) เท่านั้น");
+                }
+            }
         }
 
         Post savedPost = postRepository.save(post);
