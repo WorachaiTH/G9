@@ -5,9 +5,14 @@ import com.tu.lostandfound.model.PostImage;
 import com.tu.lostandfound.repository.PostRepository;
 import com.tu.lostandfound.repository.PostImageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -59,26 +65,31 @@ public class PostController {
         if (images != null && images.length > 0) {
             File uploadDir = new File(UPLOAD_DIR);
             if (!uploadDir.exists()) {
-                uploadDir.mkdir();
+                uploadDir.mkdirs();
             }
 
             for (int i = 0; i < images.length; i++) {
                 MultipartFile file = images[i];
                 try {
-                    String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-                    Path filePath = Paths.get(UPLOAD_DIR + fileName);
+                    String extension = "image/png".equals(file.getContentType()) ? ".png" : ".jpg";
+                    String fileName = UUID.randomUUID() + extension;
+                    Path filePath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize().resolve(fileName);
                     
                     Files.write(filePath, file.getBytes());
 
                     PostImage postImage = new PostImage();
-                    postImage.setImageUrl("/uploads/" + fileName);
+                    postImage.setImageUrl("/api/posts/images/" + fileName);
                     postImage.setDisplayOrder(i + 1);
                     postImage.setPost(savedPost);
 
                     postImageRepository.save(postImage);
+                    savedPost.getImageUrls().add(postImage.getImageUrl());
 
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new ResponseStatusException(
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Unable to save uploaded image",
+                            e);
                 }
             }
         }
@@ -88,9 +99,31 @@ public class PostController {
 
     @GetMapping
     public List<Post> getAllPosts(@RequestParam(required = false) Post.PostType type) {
-        if (type != null) {
-            return postRepository.findByType(type);
+        List<Post> posts = type != null
+                ? postRepository.findByType(type)
+                : postRepository.findAll();
+        posts.forEach(post -> post.setImageUrls(
+                postImageRepository.findByPostIdOrderByDisplayOrderAsc(post.getId()).stream()
+                        .map(PostImage::getImageUrl)
+                        .collect(Collectors.toList())));
+        return posts;
+    }
+
+    @GetMapping("/images/{fileName:.+}")
+    public ResponseEntity<Resource> getImage(@PathVariable String fileName) {
+        if (!fileName.matches("[a-f0-9-]{36}\\.(jpg|png)")) {
+            return ResponseEntity.notFound().build();
         }
-        return postRepository.findAll();
+
+        Path uploadDirectory = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Path imagePath = uploadDirectory.resolve(fileName).normalize();
+        if (!imagePath.startsWith(uploadDirectory) || !Files.isRegularFile(imagePath)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        MediaType mediaType = fileName.endsWith(".png") ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(new FileSystemResource(imagePath));
     }
 }
