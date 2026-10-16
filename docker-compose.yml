@@ -1,0 +1,41 @@
+services:
+  # กล่องที่ 1: MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: lostandfound-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # กล่องที่ 2: Spring Boot Backend
+  backend:
+    build: .
+    container_name: lostandfound-backend
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - db
+
+  # กล่องที่ 3: Frontend (เอาไฟล์ HTML/CSS/JS ไปรันบน Nginx)
+  frontend:
+    image: nginx:alpine
+    container_name: lostandfound-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
