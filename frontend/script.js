@@ -6,7 +6,7 @@ const esc = (s) =>
   }[c]));
 
 const ALLOWED_EMAIL = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const SESSION_EMAIL_KEY = 'lostAndFoundEmail';
 
 const ICONS = {
@@ -36,11 +36,28 @@ function postCard(p, index) {
           <p><b>${esc(p.desc)}</b></p>
         </div>
         <div class="meta">${isLost ? 'หายที่' : 'พบที่'}: ${esc(p.place)}</div>
-        <div class="meta">เวลา: ${p.time}</div>
+        <div class="meta">เวลา: ${esc(p.time)}</div>
         <button class="ct" data-i="${index}">${isLost ? 'ติดต่อเจ้าของ' : 'ติดต่อผู้พบ'}</button>
         <div class="ctv" id="c${index}" hidden>${esc(p.name)} · ${esc(p.contact)}</div>
       </div>
     </div>`;
+}
+
+function toViewPost(post) {
+  const contactInfo = String(post.contactInfo || '');
+  const separator = contactInfo.indexOf(' · ');
+  const timestamp = post.dateTime || post.createdAt || '';
+
+  return {
+    type: String(post.type || '').toLowerCase(),
+    desc: post.description || post.title || '',
+    place: post.location || '',
+    time: timestamp ? timestamp.replace('T', ' ').slice(0, 16) : '',
+    name: separator < 0 ? '' : contactInfo.slice(0, separator),
+    contact: separator < 0 ? contactInfo : contactInfo.slice(separator + 3),
+    img: post.img || null,
+    icon: String(post.type).toLowerCase() === 'lost' ? 'bag' : 'wallet',
+  };
 }
 
 function render() {
@@ -109,7 +126,7 @@ function handleImage(e) {
     return;
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    $('eImg').textContent = 'ไฟล์ใหญ่เกิน 10 MB';
+    $('eImg').textContent = 'ไฟล์ใหญ่เกิน 5 MB';
     return;
   }
   const reader = new FileReader();
@@ -122,19 +139,20 @@ function handleImage(e) {
   };
   reader.readAsDataURL(file);
 }
-
-function submitPost() {
+async function submitPost() {
   const v = {
-    desc: $('desc').value.trim(),
-    place: $('loc').value.trim(),
+    title: $('desc').value.trim(),
+    description: $('desc').value.trim(),
+    location: $('loc').value.trim(),
     name: $('name').value.trim(),
     contact: $('tel').value.trim(),
+    type: type.toUpperCase(),
+    authorEmail: $('who').textContent,
   };
-
   const errors = {
     eImg: photo || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
-    eDesc: v.desc ? '' : 'กรุณาใส่รายละเอียด',
-    eLoc: v.place ? '' : 'กรุณาใส่สถานที่',
+    eDesc: v.title ? '' : 'กรุณาใส่รายละเอียด',
+    eLoc: v.location ? '' : 'กรุณาใส่สถานที่',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
     eTel: v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
   };
@@ -145,19 +163,50 @@ function submitPost() {
     if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
+  const formData = new FormData();
+  const postData = {
+    title: v.title,
+    description: v.description,
+    location: v.location,
+    contactInfo: `${v.name} · ${v.contact}`,
+    type: v.type,
+    authorEmail: v.authorEmail,
+  };
+  formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
 
-  posts.unshift({
-    type,
-    img: photo,
-    icon: type === 'lost' ? 'bag' : 'wallet',
-    ...v,
-    time: 'วันนี้ ' + new Date().toTimeString().slice(0, 5),
-  });
-  resetForm();
-  render();
-  setTab(type);
-  $('toast').hidden = false;
-  show('home');
+  const fileInput = $('file');
+  if (fileInput.files && fileInput.files[0]) {
+    formData.append('images', fileInput.files[0]);
+  }
+
+  try {
+    const response = await fetch('http://localhost:8080/api/posts', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errMessage = await response.text();
+      alert(errMessage || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      return;
+    }
+
+    const savedPost = await response.json();
+    const imagePreview = photo;
+    resetForm();
+    const refreshed = await fetchPosts();
+    if (!refreshed) {
+      posts.unshift({ ...toViewPost(savedPost), img: imagePreview });
+      render();
+    }
+    setTab(type);
+    $('toast').hidden = false;
+    show('home');
+  }
+  catch (error) {
+    console.error('Network Error:', error);
+    alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+  }
 }
 
 function showLoginMessage(text) {
@@ -245,3 +294,19 @@ if (savedEmail && ALLOWED_EMAIL.test(savedEmail)) {
   $('who').textContent = savedEmail;
   show('home');
 }
+
+async function fetchPosts() {
+  try {
+    const response = await fetch('http://localhost:8080/api/posts');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    posts.splice(0, posts.length, ...data.map(toViewPost));
+    render();
+    return true;
+  } catch (error){
+    console.error('Failed to fetch posts:', error);
+    return false;
+  }
+}
+fetchPosts();
