@@ -180,24 +180,6 @@ try {
   }
 }
 
-
-// สามารถลบได้เลย
-/*
-  posts.unshift({
-    type,
-    img: photo,
-    icon: type === 'lost' ? 'bag' : 'wallet',
-    ...v,
-    time: 'วันนี้ ' + new Date().toTimeString().slice(0, 5),
-  });
-  resetForm();
-  render();
-  setTab(type);
-  $('toast').hidden = false;
-  show('home');
-  */
-
-
 function showLoginMessage(text) {
   $('lgmsg').textContent = text;
   $('lgmsg').hidden = false;
