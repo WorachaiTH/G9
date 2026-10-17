@@ -122,21 +122,22 @@ function handleImage(e) {
   };
   reader.readAsDataURL(file);
 }
-
-function submitPost() {
+// ระบบหลังบ้านใช้ title, location, name, contactInfo เป็น key ของ JSON แต่หน้าเว็ปใช้ desc, place, name, contact เป็น key ของหน้าบ้านเลยต้องแปลงให้ตรงกัน
+async function submitPost() {
   const v = {
-    desc: $('desc').value.trim(),
-    place: $('loc').value.trim(),
+    title: $('desc').value.trim(),
+    location: $('loc').value.trim(),
     name: $('name').value.trim(),
-    contact: $('tel').value.trim(),
+    contactInfo: $('tel').value.trim(),
+    type: type.toUpperCase() // 'LOST' หรือ 'FOUND' เทียบกับ enum ในหลังบ้าน
   };
-
+// เปลี่ยน key ให้ตรงกับหลังบ้าน
   const errors = {
     eImg: photo || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
-    eDesc: v.desc ? '' : 'กรุณาใส่รายละเอียด',
-    eLoc: v.place ? '' : 'กรุณาใส่สถานที่',
+    eDesc: v.title ? '' : 'กรุณาใส่รายละเอียด',
+    eLoc: v.location ? '' : 'กรุณาใส่สถานที่',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
-    eTel: v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
+    eTel: v.contactInfo ? '' : 'กรุณาใส่ช่องทางติดต่อ',
   };
   Object.keys(errors).forEach((id) => ($(id).textContent = errors[id]));
 
@@ -145,7 +146,43 @@ function submitPost() {
     if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
+//สร้าง FornData เพื่อส่งไฟล์และข้อมูล JSON ไปยัง Spring boot controller
+  const formData = new FormData();
+  // แปลง object ข้อมูลโพสตต์ เป็น blob (application/json) เพื่อให้ตรงกับ @RequestPart("post")
+  formData.append('post', newBlob([JSON.stringify(v)], { type: 'application/json' }));
+// ถ้ามีรูปภาพให้แนบไปด้วย ถ้าไม่มีก็ไม่ต้องแนบ (แปลงจาก base64 เป็น file)
+  const fileInput = $('file');
+  if(fileInput.files && fileInput[0]){
+    formData.append('image', fileInput.files[0]);
+  }
 
+try {
+  const response = await fetch('http://localhost:8080/api/posts',{
+    method: POST,
+    body: formData
+  });
+
+  if(!response.ok){
+    const errMessage = await response.text();
+    alert(errMessage || 'เกิดข้อผิดพลาดในการบันข้อมูล');
+    return;
+  }
+
+  resetForm();
+  await fetchPost();
+  setTab(type);
+  $toast.hidden = false;
+  show('home')
+  }
+  catch(error){
+    console.error('Network Error:', error);
+    alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+  }
+}
+
+
+// สามารถลบได้เลย
+/*
   posts.unshift({
     type,
     img: photo,
@@ -158,7 +195,8 @@ function submitPost() {
   setTab(type);
   $('toast').hidden = false;
   show('home');
-}
+  */
+
 
 function showLoginMessage(text) {
   $('lgmsg').textContent = text;
@@ -245,3 +283,18 @@ if (savedEmail && ALLOWED_EMAIL.test(savedEmail)) {
   $('who').textContent = savedEmail;
   show('home');
 }
+
+async function fetchPosts(){
+  try {
+    const response = await fetch('http://localhost:8080/api/posts');
+    if(response.ok){
+      const data = await response.jsom();
+      post.length = 0 ;
+      posts.push(...data);
+      render();
+    }
+  } catch (error){
+    console.error('Failed to fetch posts:', error);
+  }
+}
+fetchPosts();
