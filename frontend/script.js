@@ -7,6 +7,9 @@ const esc = (s) =>
 
 const ALLOWED_EMAIL = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGES = 5;
+const API_ORIGIN = 'http://localhost:8080';
+const API_BASE_URL = `${API_ORIGIN}/api`;
 const SESSION_EMAIL_KEY = 'lostAndFoundEmail';
 const SESSION_TOKEN_KEY = 'lostAndFoundToken';
 
@@ -17,7 +20,22 @@ const ICONS = {
   bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
 };
 
-let photo = null;
+const extraStyle = document.createElement('style');
+extraStyle.textContent = `
+  .gallery { display:flex; gap:6px; overflow-x:auto; width:100%; height:100%; scroll-snap-type:x mandatory; }
+  .gallery img { flex:0 0 100%; width:100%; height:100%; object-fit:cover; scroll-snap-align:start; }
+  #thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+  #thumbs:empty { display:none; }
+  #thumbs .th { width:88px; }
+  #thumbs .th img { width:88px; height:88px; object-fit:cover; border-radius:8px; display:block; }
+  #thumbs .th .row { display:flex; justify-content:space-between; margin-top:4px; }
+  #thumbs .th button { cursor:pointer; }
+`;
+document.head.appendChild(extraStyle);
+
+$('file').multiple = true;
+
+let photoFiles = [];
 let type = 'lost';
 let tab = 'lost';
 
@@ -25,8 +43,8 @@ const posts = [];
 
 function postCard(p, index) {
   const isLost = p.type === 'lost';
-  const cover = p.img
-    ? `<img src="${esc(p.img)}" alt="">`
+  const cover = p.images.length
+    ? `<div class="gallery">${p.images.map((src) => `<img src="${esc(src)}" alt="">`).join('')}</div>`
     : `<svg viewBox="0 0 24 24">${ICONS[p.icon || 'bag']}</svg>`;
 
   return `
@@ -45,10 +63,11 @@ function postCard(p, index) {
 }
 
 function normalizePost(post) {
+  const isFound = String(post.type).toLowerCase() === 'found';
   return {
-    type: String(post.type).toLowerCase() === 'found' ? 'found' : 'lost',
-    img: post.img || post.imageUrls?.[0] || post.imageUrl || null,
-    icon: String(post.type).toLowerCase() === 'found' ? 'wallet' : 'bag',
+    type: isFound ? 'found' : 'lost',
+    images: (post.images || []).map((im) => API_ORIGIN + im.imageUrl),
+    icon: isFound ? 'wallet' : 'bag',
     desc: post.desc || post.description || post.title || '',
     place: post.place || post.location || '',
     name: post.name || post.contactName || post.authorEmail || '',
@@ -61,7 +80,7 @@ function normalizePost(post) {
 
 async function loadPosts() {
   try {
-    const response = await fetch('/api/posts');
+    const response = await fetch(`${API_BASE_URL}/posts`);
     if (!response.ok) throw new Error(`โหลดโพสต์ไม่สำเร็จ (${response.status})`);
     const data = await response.json();
     if (!Array.isArray(data)) throw new Error('รูปแบบข้อมูลโพสต์จาก backend ไม่ถูกต้อง');
@@ -129,43 +148,67 @@ function setType(t) {
     : 'กรอกข้อมูลของที่คุณเจอ เพื่อให้เจ้าของติดต่อกลับได้';
 }
 
+function renderPreviews() {
+  let box = $('thumbs');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'thumbs';
+    $('drop').parentNode.insertBefore(box, $('drop'));
+    box.onclick = (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const i = Number(btn.dataset.i);
+      const act = btn.dataset.act;
+      if (act === 'del') {
+        URL.revokeObjectURL(photoFiles[i].url);
+        photoFiles.splice(i, 1);
+      } else {
+        const j = act === 'left' ? i - 1 : i + 1;
+        if (j < 0 || j >= photoFiles.length) return;
+        [photoFiles[i], photoFiles[j]] = [photoFiles[j], photoFiles[i]];
+      }
+      renderPreviews();
+    };
+  }
+
+  box.innerHTML = photoFiles.map((p, i) => `
+    <div class="th">
+      <img src="${esc(p.url)}" alt="">
+      <div class="row">
+        <button type="button" data-act="left" data-i="${i}" ${i === 0 ? 'disabled' : ''}>◀</button>
+        <button type="button" data-act="del" data-i="${i}">✕</button>
+        <button type="button" data-act="right" data-i="${i}" ${i === photoFiles.length - 1 ? 'disabled' : ''}>▶</button>
+      </div>
+    </div>`).join('');
+
+  $('prev').hidden = true;
+  $('drop').hidden = photoFiles.length >= MAX_IMAGES;
+}
+
 function resetForm() {
-  photo = null;
-  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = '')); $('prev').hidden = true;
-  $('drop').hidden = false;
+  photoFiles.forEach((p) => URL.revokeObjectURL(p.url));
+  photoFiles = [];
+  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));
   ['eImg', 'eDesc', 'eLoc', 'eName', 'eTel'].forEach((id) => ($(id).textContent = ''));
+  renderPreviews();
 }
 
 function handleImage(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const rejectImage = (message) => {
-    photo = null;
-    $('file').value = '';
-    $('prev').hidden = true;
-    $('drop').hidden = false;
-    $('eImg').textContent = message;
-  };
+  const files = Array.from(e.target.files || []);
+  $('file').value = '';
+  if (!files.length) return;
 
-  if (!['image/jpeg', 'image/png'].includes(file.type)) {
-    rejectImage('รองรับเฉพาะไฟล์ JPG หรือ PNG');
-    return;
+  let message = '';
+  for (const file of files) {
+    if (photoFiles.length >= MAX_IMAGES) { message = `แนบได้สูงสุด ${MAX_IMAGES} รูป`; break; }
+    if (!['image/jpeg', 'image/png'].includes(file.type)) { message = 'รองรับเฉพาะไฟล์ JPG หรือ PNG'; continue; }
+    if (file.size > MAX_IMAGE_BYTES) { message = 'ไฟล์ใหญ่เกิน 5 MB'; continue; }
+    photoFiles.push({ file, url: URL.createObjectURL(file) });
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    rejectImage('ไฟล์ใหญ่เกิน 5 MB');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    photo = reader.result;
-    $('img').src = photo;
-    $('prev').hidden = false;
-    $('drop').hidden = true;
-    $('eImg').textContent = '';
-  };
-  reader.onerror = () => rejectImage('ไม่สามารถอ่านไฟล์รูปภาพได้');
-  reader.readAsDataURL(file);
+  $('eImg').textContent = message;
+  renderPreviews();
 }
+
 async function submitPost() {
   const v = {
     title: $('desc').value.trim(),
@@ -176,7 +219,7 @@ async function submitPost() {
     type,
   };
   const errors = {
-    eImg: photo || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
+    eImg: photoFiles.length || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
     eDesc: v.title ? '' : 'กรุณาใส่รายละเอียด',
     eLoc: v.location ? '' : 'กรุณาใส่สถานที่',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
@@ -191,20 +234,25 @@ async function submitPost() {
   }
   try {
     const token = localStorage.getItem(SESSION_TOKEN_KEY);
-    const response = await fetch('/api/posts', {
+
+    const postData = {
+      type: v.type,
+      title: v.title.slice(0, 100),
+      description: v.description,
+      location: v.location,
+      contactName: v.name,
+      contactInfo: v.contact,
+      authorEmail: localStorage.getItem(SESSION_EMAIL_KEY) || 'anonymous@tu.ac.th',
+    };
+
+    const formData = new FormData();
+    formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
+    photoFiles.forEach(({ file }) => formData.append('images', file));
+
+    const response = await fetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        type: v.type,
-        desc: v.title,
-        place: v.location,
-        name: v.name,
-        contact: v.contact,
-        img: photo,
-      }),
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
     });
 
     if (!response.ok) {
@@ -255,18 +303,20 @@ async function login() {
 
   $('lgmsg').hidden = true;
   try {
-    const response = await fetch('/api/login', {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'เข้าสู่ระบบไม่สำเร็จ');
+    const text = await response.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch { data = { message: text }; }
+    if (!response.ok || !data.token) throw new Error(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
 
-    $('who').textContent = result.email;
+    $('who').textContent = data.email;
     $('pw').value = '';
-    localStorage.setItem(SESSION_EMAIL_KEY, result.email);
-    localStorage.setItem(SESSION_TOKEN_KEY, result.token);
+    localStorage.setItem(SESSION_EMAIL_KEY, data.email);
+    localStorage.setItem(SESSION_TOKEN_KEY, data.token);
     await loadPosts();
     show('home');
   } catch (error) {
@@ -300,18 +350,7 @@ $('forgot').onclick = (e) => {
   showLoginMessage('ฟีเจอร์นี้ต้องเชื่อมระบบของมหาวิทยาลัยจริง (เวอร์ชันตัวอย่างยังไม่รองรับ)');
 };
 
-$('logout').onclick = async () => {
-  const token = localStorage.getItem(SESSION_TOKEN_KEY);
-  if (token) {
-    try {
-      await fetch('/api/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (error) {
-      console.error('Unable to end server session:', error);
-    }
-  }
+$('logout').onclick = () => {
   localStorage.removeItem(SESSION_EMAIL_KEY);
   localStorage.removeItem(SESSION_TOKEN_KEY);
   $('em').value = '';
@@ -326,7 +365,9 @@ $('navAdd').onclick = () => { $('toast').hidden = true; setType(tab); show('form
 
 $('sL').onclick = () => setType('lost');
 $('sF').onclick = () => setType('found'); $('back').onclick = () => { resetForm(); show('home'); };
-$('drop').onclick = $('rm').onclick = () => $('file').click(); $('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); }; $('file').onchange = handleImage;
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); };
+$('file').onchange = handleImage;
 $('post').onclick = submitPost;
 
 render();
@@ -334,30 +375,16 @@ setType('lost');
 
 async function restoreSession() {
   const token = localStorage.getItem(SESSION_TOKEN_KEY);
+  const email = localStorage.getItem(SESSION_EMAIL_KEY);
   if (!token) {
     localStorage.removeItem(SESSION_EMAIL_KEY);
     show('login');
     return;
   }
 
-  try {
-    const response = await fetch('/api/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) throw new Error('กรุณาเข้าสู่ระบบใหม่');
-    const result = await response.json();
-    if (!ALLOWED_EMAIL.test(result.email)) throw new Error('ข้อมูล session ไม่ถูกต้อง');
-
-    $('who').textContent = result.email;
-    localStorage.setItem(SESSION_EMAIL_KEY, result.email);
-    await loadPosts();
-    show('home');
-  } catch (error) {
-    localStorage.removeItem(SESSION_EMAIL_KEY);
-    localStorage.removeItem(SESSION_TOKEN_KEY);
-    show('login');
-    showLoginMessage(error.message || 'ไม่สามารถตรวจสอบ session ได้');
-  }
+  $('who').textContent = email || '';
+  await loadPosts();
+  show('home');
 }
 
 restoreSession();

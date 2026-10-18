@@ -2,24 +2,23 @@ package com.tu.lostandfound.controller;
 
 import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.model.PostImage;
-import com.tu.lostandfound.repository.PostRepository;
 import com.tu.lostandfound.repository.PostImageRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
+import com.tu.lostandfound.repository.PostRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,102 +27,117 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 public class PostController {
 
-    @Autowired
-    private PostRepository postRepository;
+    private static final Path UPLOAD_PATH = Paths.get("uploads");
+    private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
+    private static final Map<String, String> ALLOWED_TYPES =
+            Map.of("image/jpeg", ".jpg", "image/png", ".png");
 
-    @Autowired
-    private PostImageRepository postImageRepository;
+    private final PostRepository postRepository;
+    private final PostImageRepository postImageRepository;
 
-    private static final String UPLOAD_DIR = "uploads/";
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    public PostController(PostRepository postRepository, PostImageRepository postImageRepository) {
+        this.postRepository = postRepository;
+        this.postImageRepository = postImageRepository;
+    }
 
-    @PostMapping(consumes = {"multipart/form-data"})
-    public ResponseEntity<?> createPostWithImages(
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public ResponseEntity<?> createPost(
             @RequestPart("post") Post post,
             @RequestPart(value = "images", required = false) MultipartFile[] images) {
-        
-        if (post.getTitle() == null || post.getTitle().trim().isEmpty() ||
-            post.getLocation() == null || post.getLocation().trim().isEmpty() ||
-            post.getContactInfo() == null || post.getContactInfo().trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("Error: กรุณากรอกข้อมูลจำเป็นให้ครบถ้วน");
+
+        if (isBlank(post.getLocation()) || isBlank(post.getContactInfo())) {
+            return ResponseEntity.badRequest().body("กรุณากรอกสถานที่และช่องทางติดต่อ");
         }
 
-        if (images != null && images.length > 0) {
+        // title / description ห้ามว่าง (DB บังคับ NOT NULL)
+        if (isBlank(post.getTitle()) && isBlank(post.getDescription())) {
+            post.setTitle("รายการของหาย/พบของ");
+            post.setDescription(post.getTitle());
+        } else if (isBlank(post.getTitle())) {
+            post.setTitle(post.getDescription());
+        } else if (isBlank(post.getDescription())) {
+            post.setDescription(post.getTitle());
+        }
+
+        // title ยาวเกิน 255 ตัวอักษรจะบันทึกไม่ได้
+        if (post.getTitle().length() > 255) {
+            post.setTitle(post.getTitle().substring(0, 255));
+        }
+
+        // ไม่เชื่อค่าที่ client ส่งมาในฟิลด์เหล่านี้
+        post.setId(null);
+        post.setStatus(Post.PostStatus.pending_review);
+        if (post.getType() == null) {
+            post.setType(Post.PostType.lost);
+        }
+
+        // ตรวจรูปก่อนบันทึกอะไรทั้งหมด
+        List<MultipartFile> validImages = new ArrayList<>();
+        if (images != null) {
             for (MultipartFile file : images) {
+                if (file.isEmpty()) continue;
                 if (file.getSize() > MAX_FILE_SIZE) {
-                    return ResponseEntity.badRequest().body("Error: ขนาดไฟล์รูปภาพเกินกำหนด (สูงสุด 5MB)");
+                    return ResponseEntity.badRequest().body("ขนาดไฟล์รูปภาพเกินกำหนด (สูงสุด 5MB)");
                 }
                 String contentType = file.getContentType();
-                if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/jpg"))) {
-                    return ResponseEntity.badRequest().body("Error: รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG) เท่านั้น");
+                if (contentType == null || !ALLOWED_TYPES.containsKey(contentType)) {
+                    return ResponseEntity.badRequest().body("รองรับเฉพาะไฟล์รูปภาพ JPG, PNG เท่านั้น");
                 }
+                validImages.add(file);
             }
         }
 
-        Post savedPost = postRepository.save(post);
-
-        if (images != null && images.length > 0) {
-            File uploadDir = new File(UPLOAD_DIR);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
-
-            for (int i = 0; i < images.length; i++) {
-                MultipartFile file = images[i];
-                try {
-                    String extension = "image/png".equals(file.getContentType()) ? ".png" : ".jpg";
-                    String fileName = UUID.randomUUID() + extension;
-                    Path filePath = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize().resolve(fileName);
-                    
-                    Files.write(filePath, file.getBytes());
-
-                    PostImage postImage = new PostImage();
-                    postImage.setImageUrl("/api/posts/images/" + fileName);
-                    postImage.setDisplayOrder(i + 1);
-                    postImage.setPost(savedPost);
-
-                    postImageRepository.save(postImage);
-                    savedPost.getImageUrls().add(postImage.getImageUrl());
-
-                } catch (IOException e) {
-                    throw new ResponseStatusException(
-                            HttpStatus.INTERNAL_SERVER_ERROR,
-                            "Unable to save uploaded image",
-                            e);
-                }
-            }
+        if (validImages.size() > 5) {
+        return ResponseEntity.badRequest().body("แนบรูปได้สูงสุด 5 รูป");
         }
 
-        return ResponseEntity.ok(savedPost);
+        List<Path> savedFiles = new ArrayList<>();
+        try {
+            Files.createDirectories(UPLOAD_PATH);
+            Post savedPost = postRepository.save(post);
+
+            int order = 1;
+            for (MultipartFile file : validImages) {
+                String fileName = UUID.randomUUID() + ALLOWED_TYPES.get(file.getContentType());
+                Path target = UPLOAD_PATH.resolve(fileName);
+                Files.copy(file.getInputStream(), target);
+                savedFiles.add(target);
+
+                PostImage postImage = new PostImage();
+                postImage.setImageUrl("/uploads/" + fileName);
+                postImage.setMimeType(file.getContentType());
+                postImage.setSizeBytes((int) file.getSize());
+                postImage.setSortOrder((short) order++);
+                postImage.setPost(savedPost);
+                postImageRepository.save(postImage);
+            }
+            return ResponseEntity.ok(savedPost);
+
+        } catch (IOException e) {
+            deleteFiles(savedFiles);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "บันทึกรูปภาพไม่สำเร็จ", e);
+        } catch (RuntimeException e) {
+            deleteFiles(savedFiles);
+            throw e; // ให้ transaction rollback และเห็น error ใน console
+        }
     }
 
-    @GetMapping
-    public List<Post> getAllPosts(@RequestParam(required = false) Post.PostType type) {
-        List<Post> posts = type != null
-                ? postRepository.findByType(type)
-                : postRepository.findAll();
-        posts.forEach(post -> post.setImageUrls(
-                postImageRepository.findByPostIdOrderByDisplayOrderAsc(post.getId()).stream()
-                        .map(PostImage::getImageUrl)
-                        .collect(Collectors.toList())));
-        return posts;
+        @GetMapping
+    public List<Post> getAllPosts(@RequestParam(required = false) Post.PostStatus status) {
+        if (status != null) {
+            return postRepository.findByStatusOrderByCreatedAtDesc(status);
+        }
+        return postRepository.findAllByOrderByCreatedAtDesc();
     }
 
-    @GetMapping("/images/{fileName:.+}")
-    public ResponseEntity<Resource> getImage(@PathVariable String fileName) {
-        if (!fileName.matches("[a-f0-9-]{36}\\.(jpg|png)")) {
-            return ResponseEntity.notFound().build();
-        }
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 
-        Path uploadDirectory = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
-        Path imagePath = uploadDirectory.resolve(fileName).normalize();
-        if (!imagePath.startsWith(uploadDirectory) || !Files.isRegularFile(imagePath)) {
-            return ResponseEntity.notFound().build();
+    private static void deleteFiles(List<Path> files) {
+        for (Path p : files) {
+            try { Files.deleteIfExists(p); } catch (IOException ignored) {}
         }
-
-        MediaType mediaType = fileName.endsWith(".png") ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .body(new FileSystemResource(imagePath));
     }
 }

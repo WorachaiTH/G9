@@ -8,5 +8,8 @@ import java.util.List;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
     
-    List<Post> findByType(Post.PostType type);
+    List<Post> findByStatus(Post.PostStatus status);
+    List<Post> findAllByOrderByCreatedAtDesc();
+
+    List<Post> findByStatusOrderByCreatedAtDesc(Post.PostStatus status);
 }
