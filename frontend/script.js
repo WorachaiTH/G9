@@ -13,9 +13,9 @@ const API_BASE_URL = `${API_ORIGIN}/api`;
 
 const ICONS = {
   wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h5v3h-5a1.5 1.5 0 0 1 0-3z"/>',
-  key:    '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v4"/>',
-  phone:  '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
-  bag:    '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
+  key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v4"/>',
+  phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
 };
 
 let photoFile = null;
@@ -54,6 +54,23 @@ function postCard(p, index) {
         <div class="ctv" id="c${index}" hidden>${esc(p.name)} · ${esc(p.contact)}</div>
       </div>
     </div>`;
+}
+
+function toViewPost(post) {
+  const contactInfo = String(post.contactInfo || '');
+  const separator = contactInfo.indexOf(' · ');
+  const timestamp = post.dateTime || post.createdAt || '';
+
+  return {
+    type: String(post.type || '').toLowerCase(),
+    desc: post.description || post.title || '',
+    place: post.location || '',
+    time: timestamp ? timestamp.replace('T', ' ').slice(0, 16) : '',
+    name: separator < 0 ? '' : contactInfo.slice(0, separator),
+    contact: separator < 0 ? contactInfo : contactInfo.slice(separator + 3),
+    img: post.img || null,
+    icon: String(post.type).toLowerCase() === 'lost' ? 'bag' : 'wallet',
+  };
 }
 
 function render() {
@@ -118,6 +135,7 @@ function show(view) {
   $('navHome').classList.toggle('active', view === 'home');
   $('navAdd').classList.toggle('active', view === 'form');
 
+  document.body.classList.toggle('plaid', view !== 'login');
   window.scrollTo(0, 0);
 }
 
@@ -180,18 +198,20 @@ function handleImage(e) {
 
 async function submitPost() {
   const v = {
-    desc: $('desc').value.trim(),
-    place: $('loc').value.trim(),
+    title: $('desc').value.trim(),
+    description: $('desc').value.trim(),
+    location: $('loc').value.trim(),
     name: $('name').value.trim(),
     contact: $('tel').value.trim(),
+    type: type.toUpperCase(),
+    authorEmail: $('who').textContent,
   };
-
   const errors = {
     eImg:  photoFile || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
     eDesc: v.desc ? '' : 'กรุณาใส่รายละเอียด',
     eLoc:  v.place ? '' : 'กรุณาใส่สถานที่',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
-    eTel:  v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
+    eTel: v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
   };
   Object.keys(errors).forEach((id) => ($(id).textContent = errors[id]));
 
@@ -200,6 +220,16 @@ async function submitPost() {
     if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
+  const formData = new FormData();
+  const postData = {
+    title: v.title,
+    description: v.description,
+    location: v.location,
+    contactInfo: `${v.name} · ${v.contact}`,
+    type: v.type,
+    authorEmail: v.authorEmail,
+  };
+  formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
 
   $('post').disabled = true; // กันกดซ้ำ
   try {

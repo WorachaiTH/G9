@@ -1,8 +1,8 @@
 :root {
   box-sizing: border-box;
   color-scheme: light;
-  padding-top: env(safe-area-inset-top,0px);
-  padding-bottom: env(safe-area-inset-bottom,0px);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   --bg: #fbf6ec;
   --card: #fffdf8;
   --field: #f5ecdc;
@@ -28,7 +28,7 @@
 }
 
 html {
-  scroll-padding-top: env(safe-area-inset-top,0px);
+  scroll-padding-top: env(safe-area-inset-top, 0px);
 }
 
 * {
@@ -39,8 +39,16 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--tx);
-  font-family: "Noto Sans Thai","Sarabun",system-ui,sans-serif;
+  font-family: "Itim", sans-serif;
   line-height: 1.5;
+}
+
+body.plaid {
+  background-color: #fffbea;
+  background-size: 72px 72px;
+  background-image:
+    linear-gradient(90deg, rgba(255, 232, 160, .26) 0 24px, transparent 24px),
+    linear-gradient(0deg, rgba(255, 232, 160, .26) 0 24px, transparent 24px);
 }
 
 .navbar {
@@ -49,7 +57,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .nav-container {
@@ -128,7 +136,7 @@ body {
 .wrap {
   max-width: 520px;
   margin: 0 auto;
-  padding: 16px 16px 110px;
+  padding: 16px 16px 40px;
 }
 
 h1 {
@@ -140,6 +148,27 @@ h1 {
   color: var(--mut);
   margin: 0 0 16px;
   font-size: .92rem;
+}
+
+.headbox {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(62, 43, 30, .08);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.headbox h1 {
+  margin: 0;
+}
+
+.headbox .top {
+  margin-bottom: 4px;
+}
+
+.headbox .sub {
+  margin: 4px 0 14px 0;
 }
 
 .top {
@@ -285,7 +314,7 @@ textarea {
   border: 0;
   border-radius: 20px;
   padding: 6px 12px;
-  background: rgba(0,0,0,.65);
+  background: rgba(0, 0, 0, .65);
   color: #fff;
   font: inherit;
   font-size: .85rem;
@@ -315,6 +344,14 @@ textarea {
   color: var(--pt);
   cursor: pointer;
   font-size: 1rem;
+}
+
+#post {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin-inline: auto;
+  justify-self: center;
 }
 
 .btn.l {
@@ -403,20 +440,52 @@ textarea {
   gap: 8px;
   font-weight: 700;
   font-size: 1.05rem;
-  margin: 0 0 12px;
+  min-height: 44px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bd);
 }
 
 .cnt {
   font-size: .8rem;
   font-weight: 600;
+  min-width: 28px;
+  text-align: center;
   border-radius: 20px;
-  padding: 1px 10px;
+  padding: 2px 9px;
   background: var(--pri);
   color: var(--pt);
 }
 
+.col.l .cnt {
+  background: var(--lsoft);
+  color: var(--lost-ink);
+}
+
+.col.f .cnt {
+  background: var(--fsoft);
+  color: var(--found-ink);
+}
+
 .tabs {
   margin-bottom: 16px;
+}
+
+#cols {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+#feedL>.meta,
+#feedF>.meta {
+  background: var(--field);
+  border: 1px dashed var(--bd);
+  border-radius: 12px;
+  padding: 20px 12px;
+  text-align: center;
+  margin-bottom: 0;
 }
 
 .post {
@@ -425,13 +494,13 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 14px;
 }
 
 .ph {
   width: 100%;
   height: 200px;
   object-fit: cover;
-  display: block;
   background: var(--fsoft);
   border-radius: 12px;
   overflow: hidden;
@@ -533,24 +602,6 @@ textarea {
   background: var(--lsoft);
 }
 
-.fab {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom,0px));
-  background: linear-gradient(transparent,var(--bg) 35%);
-  pointer-events: none;
-}
-
-.fab button {
-  pointer-events: auto;
-  display: block;
-  margin: 0 auto;
-  max-width: 488px;
-  box-shadow: 0 4px 14px rgba(0,0,0,.2);
-}
-
 .toast {
   background: var(--ok);
   color: var(--ok-tx);
@@ -561,7 +612,7 @@ textarea {
 }
 
 [hidden] {
-  display: none!important;
+  display: none !important;
 }
 
 #home[data-tab="lost"] .col.f,
@@ -578,66 +629,79 @@ textarea {
 @media (min-width: 960px) {
   .wrap {
     max-width: 1120px;
-    padding: 32px 32px 110px;
+    padding: 32px 32px 40px;
   }
+
   h1 {
     font-size: 1.9rem;
   }
+
   .sub {
     font-size: 1rem;
     margin-bottom: 24px;
   }
+
+  .headbox {
+    padding: 16px 24px;
+    margin-bottom: 24px;
+  }
+
+  .headbox .sub {
+    margin: 4px 0 0;
+  }
+
   .tabs {
     display: none;
   }
+
   .lg {
     display: block;
     max-width: 520px;
     margin: 40px auto 0;
   }
+
   .lg-form {
     background: var(--card);
     border: 1px solid var(--bd);
     border-radius: 20px;
     padding: 32px;
   }
+
   #cols {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
     align-items: start;
+    padding: 24px 28px;
   }
+
   #home .col {
-    display: block!important;
+    display: block !important;
+    min-width: 0;
   }
-  .col.l,
-  .col.f {
-    background: var(--card);
-    border: 1px solid var(--bd);
-    border-radius: 20px;
-    padding: 20px;
+
+  #home .col.l {
+    padding-right: 24px;
   }
+
+  #home .col.f {
+    border-left: 1px solid var(--bd);
+    padding-left: 24px;
+  }
+
   .col .card {
     margin-bottom: 16px;
   }
+
   .post {
-    transition: box-shadow .15s,transform .15s;
+    transition: box-shadow .15s, transform .15s;
   }
+
   .post:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
     transform: translateY(-2px);
   }
-  .fab {
-    left: auto;
-    right: max(32px,calc((100vw - 1056px)/2));
-    padding: 0 0 28px;
-    background: none;
-  }
-  .fab button {
-    width: auto;
-    padding: 14px 32px;
-    border-radius: 999px;
-  }
+
   #form {
     max-width: 980px;
     margin: 0 auto;
@@ -646,33 +710,40 @@ textarea {
     column-gap: 20px;
     align-items: start;
   }
-  #form .top,
-  #form .sub,
-  #form .seg {
+
+  #form>.headbox,
+  #form>.seg {
     grid-column: 1/-1;
   }
-  #form > .c1 {
+
+  #form>.c1 {
     grid-column: 1;
-    grid-row: 4/7;
+    grid-row: 3/6;
   }
-  #form > .c2 {
+
+  #form>.c2 {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  #form>.c3 {
     grid-column: 2;
     grid-row: 4;
   }
-  #form > .c3 {
-    grid-column: 2;
+
+  #form>#post {
+    grid-column: 1/-1;
     grid-row: 5;
   }
-  #form > #post {
-    grid-column: 2;
-    grid-row: 6;
-  }
+
   .drop {
     padding: 90px 12px;
   }
+
   .prev img {
     max-height: 520px;
   }
+
   textarea {
     min-height: 130px;
   }
