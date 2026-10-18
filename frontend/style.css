@@ -722,34 +722,32 @@ textarea {
   #form {
     max-width: 980px;
     margin: 0 auto;
+  }
+
+  #form>.headbox {
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: 20px;
-    align-items: start;
   }
 
-  #form>.headbox,
-  #form>.seg {
+  #form>.headbox>.top,
+  #form>.headbox>.sub,
+  #form>.headbox>.seg {
     grid-column: 1/-1;
   }
 
-  #form>.c1 {
+  #form>.headbox>.c1 {
     grid-column: 1;
-    grid-row: 3/6;
+    grid-row: 4/6;
   }
 
-  #form>.c2 {
-    grid-column: 2;
-    grid-row: 3;
-  }
-
-  #form>.c3 {
+  #form>.headbox>.c2 {
     grid-column: 2;
     grid-row: 4;
   }
 
-  #form>#post {
-    grid-column: 1/-1;
+  #form>.headbox>.c3 {
+    grid-column: 2;
     grid-row: 5;
   }
 

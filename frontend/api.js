@@ -52,13 +52,21 @@ function sendBackendRequest(path, method, body, contentType) {
 }
 
 function postToApi(post) {
+    const contactInfo = String(post.contactInfo || '');
+    const separator = contactInfo.indexOf(' · ');
+    const hasLegacyContact = !post.contactName && separator >= 0;
+
     return {
         id: post.id,
         type: String(post.type).toLowerCase(),
         desc: post.description || post.title || '',
         place: post.location || '',
-        name: post.contactName || post.authorEmail || '',
-        contact: post.contactInfo || '',
+        name: post.contactName || (hasLegacyContact
+            ? contactInfo.slice(0, separator)
+            : post.authorEmail || ''),
+        contact: hasLegacyContact
+            ? contactInfo.slice(separator + 3)
+            : contactInfo,
         img: post.imageUrls?.[0] || null,
         createdAt: post.createdAt || null,
     };
@@ -112,6 +120,36 @@ router.get('/me', (req, res) => {
     const email = getSessionEmail(req);
     if (!email) return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบใหม่' });
     return res.json({ email });
+});
+
+router.get('/posts/images/:fileName', (req, res) => {
+    if (!/^[a-f0-9-]{36}\.(jpg|png)$/i.test(req.params.fileName)) {
+        return res.sendStatus(404);
+    }
+
+    const request = transport.request(
+        {
+            hostname: backendUrl.hostname,
+            port: backendUrl.port || (backendUrl.protocol === 'https:' ? 443 : 80),
+            path: `/api/posts/images/${encodeURIComponent(req.params.fileName)}`,
+            method: 'GET',
+            headers: { host: backendUrl.host },
+        },
+        (response) => {
+            res.status(response.statusCode || 502);
+            if (response.headers['content-type']) {
+                res.set('content-type', response.headers['content-type']);
+            }
+            response.pipe(res);
+        },
+    );
+
+    request.on('error', (error) => {
+        console.error('Unable to load post image from backend:', error.message);
+        if (res.headersSent) return res.destroy(error);
+        return res.status(502).json({ error: 'ไม่สามารถโหลดรูปภาพจาก backend ได้' });
+    });
+    request.end();
 });
 
 router.get('/posts', async (req, res) => {
