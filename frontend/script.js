@@ -7,7 +7,9 @@ const esc = (s) =>
 
 const ALLOWED_EMAIL = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const SESSION_EMAIL_KEY = 'lostAndFoundEmail';
+
+const API_ORIGIN = 'http://localhost:8080';
+const API_BASE_URL = `${API_ORIGIN}/api`;
 
 const ICONS = {
   wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h5v3h-5a1.5 1.5 0 0 1 0-3z"/>',
@@ -16,16 +18,27 @@ const ICONS = {
   bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
 };
 
-let photo = null;
+let photoFile = null;
+let photoPreview = null;
 let type = 'lost';
 let tab = 'lost';
 
-const posts = [];
+let posts = [];
+
+// อ่านข้อความ error จาก backend (รองรับทั้ง JSON และข้อความธรรมดา)
+async function readMessage(res, fallback) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text).message || fallback;
+  } catch {
+    return text || fallback;
+  }
+}
 
 function postCard(p, index) {
   const isLost = p.type === 'lost';
   const cover = p.img
-    ? `<img src="${p.img}" alt="">`
+    ? `<img src="${esc(p.img)}" alt="">`
     : `<svg viewBox="0 0 24 24">${ICONS[p.icon || 'bag']}</svg>`;
 
   return `
@@ -80,13 +93,47 @@ function render() {
   });
 }
 
-function show(view) {
-  $('login').hidden = view !== 'login'; $('home').hidden = view !== 'home';
-  $('form').hidden = view !== 'form'; $('app-nav').hidden = view === 'login';
+async function fetchPosts() {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE_URL}/posts`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
 
-  if ($('navHome') && $('navAdd')) {
-    $('navHome').classList.toggle('active', view === 'home'); $('navAdd').classList.toggle('active', view === 'form');
+    if (!res.ok) throw new Error('Failed to fetch posts');
+
+    const data = await res.json();
+    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    posts = data.map((item) => {
+      const cover = item.images && item.images.length > 0 ? item.images[0].imageUrl : null;
+      return {
+        id: item.id,
+        type: String(item.type || '').toLowerCase() === 'found' ? 'found' : 'lost',
+        desc: item.description || item.title || '',
+        place: item.location || '',
+        name: item.contactName || 'ผู้แจ้ง',
+        contact: item.contactInfo || '',
+        time: item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : 'ไม่ระบุเวลา',
+        img: cover ? API_ORIGIN + cover : null,
+        icon: 'bag'
+      };
+    });
+
+    render();
+  } catch (err) {
+    console.error('Error fetching posts:', err);
   }
+}
+
+function show(view) {
+  $('login').hidden = view !== 'login';
+  $('home').hidden = view !== 'home';
+  $('form').hidden = view !== 'form';
+  $('app-nav').hidden = view === 'login';
+
+  $('navHome').classList.toggle('active', view === 'home');
+  $('navAdd').classList.toggle('active', view === 'form');
 
   document.body.classList.toggle('plaid', view !== 'login');
   window.scrollTo(0, 0);
@@ -95,7 +142,8 @@ function show(view) {
 function setTab(t) {
   tab = t;
   $('home').dataset.tab = t;
-  $('tL').className = t === 'lost' ? 'on l' : ''; $('tF').className = t === 'found' ? 'on' : '';
+  $('tL').className = t === 'lost' ? 'on l' : '';
+  $('tF').className = t === 'found' ? 'on' : '';
 }
 
 function setType(t) {
@@ -112,8 +160,10 @@ function setType(t) {
 }
 
 function resetForm() {
-  photo = null;
-  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = '')); $('prev').hidden = true;
+  photoFile = null;
+  photoPreview = null;
+  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));
+  $('prev').hidden = true;
   $('drop').hidden = false;
   ['eImg', 'eDesc', 'eLoc', 'eName', 'eTel'].forEach((id) => ($(id).textContent = ''));
 }
@@ -121,24 +171,31 @@ function resetForm() {
 function handleImage(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    $('eImg').textContent = 'กรุณาเลือกไฟล์รูปภาพ';
+
+  if (!['image/jpeg', 'image/png'].includes(file.type)) {
+    $('eImg').textContent = 'รองรับเฉพาะไฟล์ JPG หรือ PNG';
+    e.target.value = '';
     return;
   }
   if (file.size > MAX_IMAGE_BYTES) {
     $('eImg').textContent = 'ไฟล์ใหญ่เกิน 5 MB';
+    e.target.value = '';
     return;
   }
+
+  photoFile = file;
+
   const reader = new FileReader();
   reader.onload = () => {
-    photo = reader.result;
-    $('img').src = photo;
+    photoPreview = reader.result;
+    $('img').src = photoPreview;
     $('prev').hidden = false;
     $('drop').hidden = true;
     $('eImg').textContent = '';
   };
   reader.readAsDataURL(file);
 }
+
 async function submitPost() {
   const v = {
     title: $('desc').value.trim(),
@@ -150,9 +207,9 @@ async function submitPost() {
     authorEmail: $('who').textContent,
   };
   const errors = {
-    eImg: photo || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
-    eDesc: v.title ? '' : 'กรุณาใส่รายละเอียด',
-    eLoc: v.location ? '' : 'กรุณาใส่สถานที่',
+    eImg:  photoFile || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
+    eDesc: v.desc ? '' : 'กรุณาใส่รายละเอียด',
+    eLoc:  v.place ? '' : 'กรุณาใส่สถานที่',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
     eTel: v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
   };
@@ -174,38 +231,49 @@ async function submitPost() {
   };
   formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
 
-  const fileInput = $('file');
-  if (fileInput.files && fileInput.files[0]) {
-    formData.append('images', fileInput.files[0]);
-  }
-
+  $('post').disabled = true; // กันกดซ้ำ
   try {
-    const response = await fetch('http://localhost:8080/api/posts', {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+
+    const postData = {
+      type,                          // 'lost' หรือ 'found'
+      title: v.desc.slice(0, 100),
+      description: v.desc,
+      location: v.place,
+      contactName: v.name,
+      contactInfo: v.contact,
+      authorEmail: localStorage.getItem('email') || 'anonymous@tu.ac.th'
+    };
+
+    formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
+
+    if (photoFile) {
+      formData.append('images', photoFile);
+    }
+
+    // ห้ามตั้ง Content-Type เอง ให้ browser ใส่ boundary ให้
+    const res = await fetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
-      body: formData,
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData
     });
 
-    if (!response.ok) {
-      const errMessage = await response.text();
-      alert(errMessage || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    if (!res.ok) {
+      alert(await readMessage(res, 'สร้างโพสต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'));
       return;
     }
 
-    const savedPost = await response.json();
-    const imagePreview = photo;
+    await fetchPosts();
     resetForm();
-    const refreshed = await fetchPosts();
-    if (!refreshed) {
-      posts.unshift({ ...toViewPost(savedPost), img: imagePreview });
-      render();
-    }
     setTab(type);
     $('toast').hidden = false;
     show('home');
-  }
-  catch (error) {
-    console.error('Network Error:', error);
-    alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+  } catch (err) {
+    console.error('Error submitting post:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  } finally {
+    $('post').disabled = false;
   }
 }
 
@@ -214,7 +282,7 @@ function showLoginMessage(text) {
   $('lgmsg').hidden = false;
 }
 
-function login() {
+async function login() {
   const email = $('em').value.trim().toLowerCase();
   const password = $('pw').value;
   $('em').value = email;
@@ -223,6 +291,7 @@ function login() {
   if (!email) emailError = 'กรุณากรอกอีเมล';
   else if (!ALLOWED_EMAIL.test(email)) emailError = 'ใช้ได้เฉพาะอีเมล @dome.tu.ac.th เท่านั้น';
 
+  // ลบการเช็คนี้ได้ถ้ารหัสผ่าน TU มีสัญลักษณ์พิเศษ
   const hasInvalidChar = /[^a-zA-Z0-9]/.test(password);
   let passwordError = '';
   if (!password) passwordError = 'กรุณากรอกรหัสผ่าน';
@@ -232,11 +301,32 @@ function login() {
   $('ePw').textContent = passwordError;
   if (emailError || passwordError) return;
 
-  $('lgmsg').hidden = true;
-  $('who').textContent = email;
-  $('pw').value = '';
-  localStorage.setItem(SESSION_EMAIL_KEY, email);
-  show('home');
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch { data = { message: text }; }
+
+    if (res.ok && data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('email', email);
+      $('lgmsg').hidden = true;
+      $('who').textContent = email;
+      $('pw').value = '';
+      await fetchPosts();
+      show('home');
+    } else {
+      showLoginMessage(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    showLoginMessage('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+  }
 }
 
 $('loginBtn').onclick = login;
@@ -266,9 +356,9 @@ $('forgot').onclick = (e) => {
 };
 
 $('logout').onclick = () => {
-  localStorage.removeItem(SESSION_EMAIL_KEY);
+  localStorage.removeItem('token');
+  localStorage.removeItem('email');
   $('em').value = '';
-  $('who').textContent = '';
   show('login');
 };
 
@@ -279,34 +369,28 @@ $('navAdd').onclick = () => {
   show('form');
 };
 
-$('tL').onclick = () => setTab('lost'); $('tF').onclick = () => setTab('found');
-$('navAdd').onclick = () => { $('toast').hidden = true; setType(tab); show('form'); };
+$('tL').onclick = () => setTab('lost');
+$('tF').onclick = () => setTab('found');
+$('add').onclick = () => {
+  $('toast').hidden = true;
+  setType(tab);
+  show('form');
+};
 
 $('sL').onclick = () => setType('lost');
-$('sF').onclick = () => setType('found'); $('back').onclick = () => { resetForm(); show('home'); };
-$('drop').onclick = $('rm').onclick = () => $('file').click(); $('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); }; $('file').onchange = handleImage;
+$('sF').onclick = () => setType('found');
+$('back').onclick = () => { resetForm(); show('home'); };
+
+$('drop').onclick = $('rm').onclick = () => $('file').click();
+$('drop').onkeydown = (e) => { if (e.key === 'Enter') $('file').click(); };
+$('file').onchange = handleImage;
 $('post').onclick = submitPost;
 
-render();
-setType('lost');
-const savedEmail = localStorage.getItem(SESSION_EMAIL_KEY);
-if (savedEmail && ALLOWED_EMAIL.test(savedEmail)) {
-  $('who').textContent = savedEmail;
+if (localStorage.getItem('token')) {
+  $('who').textContent = localStorage.getItem('email') || '';
+  fetchPosts();
   show('home');
+} else {
+  show('login');
 }
-
-async function fetchPosts() {
-  try {
-    const response = await fetch('http://localhost:8080/api/posts');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const data = await response.json();
-    posts.splice(0, posts.length, ...data.map(toViewPost));
-    render();
-    return true;
-  } catch (error){
-    console.error('Failed to fetch posts:', error);
-    return false;
-  }
-}
-fetchPosts();
+setType('lost');
