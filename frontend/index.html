@@ -20,7 +20,10 @@
         <span>Lost & Found</span>
       </div>
       <div class="nav-menu">
-        <button type="button" class="nav-link active" id="navHome">หน้าหลัก</button>
+        <button type="button" class="nav-link active" id="navHome">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a.5.5 0 0 0 .5.5h4v-5.5h4V20h4a.5.5 0 0 0 .5-.5V10"/></svg>
+  หน้าหลัก
+</button>
         <button type="button" class="nav-link" id="navAdd">＋ เพิ่มโพสต์</button>
       </div>
       <div class="nav-user">
@@ -93,7 +96,7 @@
         <div class="card c1">
           <h2><span class="n">1</span>รูปภาพ <span class="hint" id="opt"></span></h2>
           <div class="drop" id="drop" tabindex="0">
-            <div style="font-size:2rem">📷</div><b>แตะเพื่อถ่ายรูปหรือเลือกรูป</b><span>JPG, PNG ไม่เกิน 10 MB</span>
+            <div style="font-size:2rem">📷</div><b>แตะเพื่อถ่ายรูปหรือเลือกรูป</b><span>JPG, PNG ไม่เกิน 5 MB</span>
           </div>
           <div class="prev" id="prev" hidden><img id="img" alt="รูปสิ่งของ"><button type="button"
               id="rm">เปลี่ยนรูป</button></div>
@@ -107,7 +110,7 @@
           <textarea id="desc" placeholder="เช่น กระเป๋าสตางค์สีน้ำตาล มีบัตรนักศึกษา 1 ใบ"></textarea>
           <div class="err" id="eDesc"></div>
           <label for="loc" id="locL"></label>
-          <input id="loc" placeholder="เช่น ชั้น 2 โรงอาหาร อาคาร A">
+          <input id="loc" placeholder="เช่น โรงอาหารsc, ตึกsc1 ห้อง1001">
           <div class="err" id="eLoc"></div>
         </div>
 
@@ -117,7 +120,7 @@
           <input id="name" placeholder="ชื่อ-นามสกุล หรือชื่อเล่น">
           <div class="err" id="eName"></div>
           <label for="tel">เบอร์โทร / LINE ID / อีเมล</label>
-          <input id="tel" placeholder="เช่น 08x-xxx-xxxx หรือ @lineid">
+          <input id="tel" placeholder="เช่น 08x-xxx-xxxx หรือ lineid">
           <div class="err" id="eTel"></div>
         </div>
       </div>
