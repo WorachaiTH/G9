@@ -87,6 +87,10 @@ public class PostController {
             }
         }
 
+        if (validImages.size() > 5) {
+        return ResponseEntity.badRequest().body("แนบรูปได้สูงสุด 5 รูป");
+        }
+
         List<Path> savedFiles = new ArrayList<>();
         try {
             Files.createDirectories(UPLOAD_PATH);
@@ -118,12 +122,12 @@ public class PostController {
         }
     }
 
-    @GetMapping
+        @GetMapping
     public List<Post> getAllPosts(@RequestParam(required = false) Post.PostStatus status) {
         if (status != null) {
-            return postRepository.findByStatus(status);
+            return postRepository.findByStatusOrderByCreatedAtDesc(status);
         }
-        return postRepository.findAll();
+        return postRepository.findAllByOrderByCreatedAtDesc();
     }
 
     private static boolean isBlank(String s) {
