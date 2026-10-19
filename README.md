@@ -18,4 +18,4 @@ Frontend: เข้าผ่านเบราว์เซอร์ที่ htt
 
 Backend API: พอร์ต http://localhost:8080
 4. เมื่ออยากปิดระบบ ใช้คำสั่งนี้ใน Terminal
-    docker compose down
+docker compose down
