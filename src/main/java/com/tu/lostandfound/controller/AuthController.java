@@ -16,9 +16,20 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,8 +39,8 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    private static final String TU_API_URL = "https://restapi.tu.ac.th/api/v1/auth/ad/verify";
-    private static final String EMAIL_DOMAIN = "@dome.tu.ac.th";
+    private static final String TU_API_URL = "https://restapi.tu.ac.th/api/v1/auth/Ad/verify";
+    private static final String EXTRA_ROOT_CERT = "/sectigo-root-r46.der";
     private static final long TOKEN_TTL_MS = 24L * 60 * 60 * 1000;
 
     private final UserRepository userRepository;
@@ -46,7 +57,16 @@ public class AuthController {
         this.appKey = appKey;
         this.devMode = devMode;
 
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        final SSLContext sslContext = buildSslContext();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                if (sslContext != null && connection instanceof HttpsURLConnection https) {
+                    https.setSSLSocketFactory(sslContext.getSocketFactory());
+                }
+                super.prepareConnection(connection, httpMethod);
+            }
+        };
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(5000);
         this.restTemplate = new RestTemplate(factory);
@@ -54,22 +74,57 @@ public class AuthController {
         if (jwtSecret.length() >= 32) {
             this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         } else {
-            // ไม่ได้ตั้ง jwt.secret: สุ่มคีย์ใหม่ (token จะใช้ไม่ได้หลังรีสตาร์ท)
             byte[] random = new byte[32];
             new SecureRandom().nextBytes(random);
             this.secretKey = Keys.hmacShaKeyFor(random);
         }
     }
 
+    private static SSLContext buildSslContext() {
+        try (InputStream in = AuthController.class.getResourceAsStream(EXTRA_ROOT_CERT)) {
+            if (in == null) {
+                System.err.println("Missing resource " + EXTRA_ROOT_CERT);
+                return null;
+            }
+            X509Certificate extraRoot = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(in);
+
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null, null);
+            keyStore.setCertificateEntry("extra-root", extraRoot);
+
+            TrustManagerFactory defaultFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            defaultFactory.init((KeyStore) null);
+            int i = 0;
+            for (TrustManager tm : defaultFactory.getTrustManagers()) {
+                if (tm instanceof X509TrustManager x509) {
+                    for (X509Certificate cert : x509.getAcceptedIssuers()) {
+                        keyStore.setCertificateEntry("default-" + i++, cert);
+                    }
+                }
+            }
+
+            TrustManagerFactory factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            factory.init(keyStore);
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, factory.getTrustManagers(), null);
+            return context;
+        } catch (Exception e) {
+            System.err.println("Cannot build SSL context: " + e);
+            return null;
+        }
+    }
+
     @PostMapping("/login")
+
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
-        String email = loginRequest.get("email");
+        String username = loginRequest.get("username");
+        if (username == null) username = loginRequest.get("email");
         String password = loginRequest.get("password");
 
-        if (email == null || !email.trim().toLowerCase().endsWith(EMAIL_DOMAIN)) {
-            return ResponseEntity.badRequest().body("กรุณาใช้อีเมลมหาวิทยาลัย (" + EMAIL_DOMAIN + ") เท่านั้น");
+        if (username == null || username.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("กรุณากรอกรหัสนักศึกษา/ชื่อผู้ใช้");
         }
-        email = email.trim().toLowerCase();
+        username = username.trim();
 
         if (password == null || password.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("กรุณากรอกรหัสผ่าน");
@@ -79,19 +134,34 @@ public class AuthController {
             return ResponseEntity.status(503).body("ระบบยังไม่ได้ตั้งค่า tu.api.app-key");
         }
 
-        boolean authenticated;
-        try {
-            authenticated = devMode || verifyWithTuApi(email, password);
-        } catch (RestClientException e) {
-            return ResponseEntity.status(503).body("ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนของมหาวิทยาลัยได้");
+        String identity;
+        String displayName = username;
+
+        if (devMode) {
+            identity = username;
+        } else {
+            Map<String, Object> tuUser;
+            try {
+                tuUser = verifyWithTuApi(username, password);
+            } catch (IllegalStateException e) {
+                System.err.println("TU API key error: " + e);
+                return ResponseEntity.status(503).body("คีย์เชื่อมต่อ TU API ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ");
+            } catch (RestClientException e) {
+                System.err.println("TU API error: " + e);
+                return ResponseEntity.status(503).body("ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนของมหาวิทยาลัยได้");
+            }
+
+            if (tuUser == null) {
+                return ResponseEntity.status(401).body("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+            }
+
+            Object email = tuUser.get("email");
+            identity = (email instanceof String s && !s.isBlank()) ? s.trim().toLowerCase() : username;
+            Object name = tuUser.get("displayname_th");
+            if (name instanceof String n && !n.isBlank()) displayName = n;
         }
 
-        if (!authenticated) {
-            return ResponseEntity.status(401).body("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-        }
-
-        final String userEmail = email;
-        // ไม่เก็บรหัสผ่าน (ตรวจกับระบบของมหาลัยทุกครั้ง)
+        final String userEmail = identity;
         User user = userRepository.findByEmail(userEmail)
                 .orElseGet(() -> userRepository.save(new User(userEmail, "")));
 
@@ -105,29 +175,33 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("email", user.getEmail());
+        response.put("username", username);
+        response.put("displayName", displayName);
         return ResponseEntity.ok(response);
     }
 
     @SuppressWarnings("unchecked")
-    private boolean verifyWithTuApi(String email, String password) {
+    private Map<String, Object> verifyWithTuApi(String username, String password) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Application-Key", appKey);
 
         Map<String, String> body = new HashMap<>();
-        body.put("userName", email);
-        body.put("password", password);
+        body.put("UserName", username);
+        body.put("PassWord", password);
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
                     TU_API_URL, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
-            if (!response.getStatusCode().is2xxSuccessful()) return false;
-
-            // บาง API ตอบ 200 แต่ส่ง "status": false เมื่อรหัสผิด
-            Object status = response.getBody() == null ? null : response.getBody().get("status");
-            return !(status instanceof Boolean b) || b;
+            Map<String, Object> data = response.getBody();
+            if (!response.getStatusCode().is2xxSuccessful() || data == null) return null;
+            return Boolean.TRUE.equals(data.get("status")) ? data : null;
         } catch (HttpClientErrorException e) {
-            return false; // 4xx = ข้อมูลล็อกอินไม่ถูกต้อง
+            int code = e.getStatusCode().value();
+            if (code == 401 || code == 403) {
+                throw new IllegalStateException("TU API key invalid");
+            }
+            return null;
         }
     }
 }
