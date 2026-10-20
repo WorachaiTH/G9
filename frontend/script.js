@@ -5,7 +5,9 @@ const esc = (s) =>
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
   }[c]));
 
-const ALLOWED_EMAIL = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
+const STUDENT_ID = /^\d{10}$/;
+const PASSWORD_RE = /^\d{13}$/;
+const EMAIL_DOMAIN = '@dome.tu.ac.th';
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 5;
 const API_ORIGIN = 'http://localhost:8080';
@@ -331,22 +333,21 @@ function showLoginMessage(text) {
 }
 
 async function login() {
-  const email = $('em').value.trim().toLowerCase();
+  const studentId = $('em').value.trim();
   const password = $('pw').value;
-  $('em').value = email;
+  const email = studentId + EMAIL_DOMAIN;
 
-  let emailError = '';
-  if (!email) emailError = 'กรุณากรอกอีเมล';
-  else if (!ALLOWED_EMAIL.test(email)) emailError = 'ใช้ได้เฉพาะอีเมล @dome.tu.ac.th เท่านั้น';
+  let idError = '';
+  if (!studentId) idError = 'กรุณากรอกรหัสนักศึกษา';
+  else if (!STUDENT_ID.test(studentId)) idError = 'รหัสนักศึกษาต้องเป็นตัวเลข 10 หลัก';
 
-  const hasInvalidChar = /[^a-zA-Z0-9]/.test(password);
   let passwordError = '';
   if (!password) passwordError = 'กรุณากรอกรหัสผ่าน';
-  else if (hasInvalidChar) passwordError = 'รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น';
+  else if (!PASSWORD_RE.test(password)) passwordError = 'รหัสผ่านต้องเป็นตัวเลข 13 หลักเท่านั้น';
 
-  $('eEm').textContent = emailError;
+  $('eEm').textContent = idError;
   $('ePw').textContent = passwordError;
-  if (emailError || passwordError) return;
+  if (idError || passwordError) return;
 
   $('lgmsg').hidden = true;
   try {
@@ -375,11 +376,18 @@ $('loginBtn').onclick = login;
 ['em', 'pw'].forEach((id) => {
   $(id).onkeydown = (e) => { if (e.key === 'Enter') login(); };
 });
-$('em').onblur = () => ($('em').value = $('em').value.trim().toLowerCase());
+$('em').oninput = (e) => {
+  const raw = e.target.value;
+  const digits = raw.replace(/\D/g, '').slice(0, 10);
+  e.target.value = digits;
+  $('eEm').textContent = raw !== digits ? 'กรุณากรอกตัวเลข 10 หลักเท่านั้น' : '';
+};
 
 $('pw').oninput = (e) => {
-  const hasInvalidChar = /[^a-zA-Z0-9]/.test(e.target.value);
-  $('ePw').textContent = hasInvalidChar ? 'กรุณาใช้ภาษาอังกฤษและตัวเลขเท่านั้น' : '';
+  const raw = e.target.value;
+  const digits = raw.replace(/\D/g, '').slice(0, 13);
+  e.target.value = digits;
+  $('ePw').textContent = raw !== digits ? 'กรุณากรอกตัวเลข 13 หลักเท่านั้น' : '';
 };
 
 $('eye').onclick = () => {
