@@ -11,6 +11,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -39,7 +41,8 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    private static final String TU_API_URL = "https://restapi.tu.ac.th/api/v1/auth/Ad/verify";
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String TU_API_URL = "https://restapi.tu.ac.th/api/v1/auth/ad/verify";
     private static final String EXTRA_ROOT_CERT = "/sectigo-root-r46.der";
     private static final long TOKEN_TTL_MS = 24L * 60 * 60 * 1000;
 
@@ -117,14 +120,13 @@ public class AuthController {
     @PostMapping("/login")
 
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
-        String username = loginRequest.get("username");
-        if (username == null) username = loginRequest.get("email");
+        String employeeId = loginRequest.get("employeeId");
         String password = loginRequest.get("password");
 
-        if (username == null || username.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body("กรุณากรอกรหัสนักศึกษา/ชื่อผู้ใช้");
+        if (employeeId == null || !employeeId.trim().matches("\\d+")) {
+            return ResponseEntity.badRequest().body("กรุณากรอกรหัสประจำตัวบุคลากรเป็นตัวเลข");
         }
-        username = username.trim();
+        final String normalizedEmployeeId = employeeId.trim();
 
         if (password == null || password.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("กรุณากรอกรหัสผ่าน");
@@ -134,39 +136,24 @@ public class AuthController {
             return ResponseEntity.status(503).body("ระบบยังไม่ได้ตั้งค่า tu.api.app-key");
         }
 
-        String identity;
-        String displayName = username;
-
-        if (devMode) {
-            identity = username;
-        } else {
-            Map<String, Object> tuUser;
-            try {
-                tuUser = verifyWithTuApi(username, password);
-            } catch (IllegalStateException e) {
-                System.err.println("TU API key error: " + e);
-                return ResponseEntity.status(503).body("คีย์เชื่อมต่อ TU API ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ");
-            } catch (RestClientException e) {
-                System.err.println("TU API error: " + e);
-                return ResponseEntity.status(503).body("ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนของมหาวิทยาลัยได้");
-            }
-
-            if (tuUser == null) {
-                return ResponseEntity.status(401).body("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-            }
-
-            Object email = tuUser.get("email");
-            identity = (email instanceof String s && !s.isBlank()) ? s.trim().toLowerCase() : username;
-            Object name = tuUser.get("displayname_th");
-            if (name instanceof String n && !n.isBlank()) displayName = n;
+        Map<String, Object> profile;
+        try {
+            profile = devMode ? Map.of() : verifyWithTuApi(normalizedEmployeeId, password);
+        } catch (RestClientException e) {
+            return ResponseEntity.status(503).body("ไม่สามารถเชื่อมต่อระบบยืนยันตัวตนของมหาวิทยาลัยได้");
         }
 
-        final String userEmail = identity;
-        User user = userRepository.findByEmail(userEmail)
-                .orElseGet(() -> userRepository.save(new User(userEmail, "")));
+        if (profile == null) {
+            logger.info("TU API rejected login credentials");
+            return ResponseEntity.status(401).body("รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง");
+        }
+
+        // ไม่เก็บรหัสผ่าน (ตรวจกับระบบของมหาลัยทุกครั้ง)
+        User user = userRepository.findByEmployeeId(normalizedEmployeeId)
+                .orElseGet(() -> userRepository.save(new User(normalizedEmployeeId, "")));
 
         String token = Jwts.builder()
-                .setSubject(user.getEmail())
+                .setSubject(user.getEmployeeId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + TOKEN_TTL_MS))
                 .signWith(secretKey)
@@ -174,34 +161,44 @@ public class AuthController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("email", user.getEmail());
-        response.put("username", username);
-        response.put("displayName", displayName);
+        response.put("employeeId", user.getEmployeeId());
+        response.put("displayName", profileValue(
+                profile, "displayname_th", "displayname_en", "displayname", "displayName"));
+        String email = profileValue(profile, "email");
+        if (email != null) response.put("email", email);
         return ResponseEntity.ok(response);
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> verifyWithTuApi(String username, String password) {
+    private Map<String, Object> verifyWithTuApi(String employeeId, String password) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Application-Key", appKey);
 
         Map<String, String> body = new HashMap<>();
-        body.put("UserName", username);
+        body.put("UserName", employeeId);
         body.put("PassWord", password);
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
                     TU_API_URL, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
-            Map<String, Object> data = response.getBody();
-            if (!response.getStatusCode().is2xxSuccessful() || data == null) return null;
-            return Boolean.TRUE.equals(data.get("status")) ? data : null;
+            if (!response.getStatusCode().is2xxSuccessful()) return null;
+
+            // บาง API ตอบ 200 แต่ส่ง "status": false เมื่อรหัสผิด
+            Map<String, Object> profile = response.getBody();
+            Object status = profile == null ? null : profile.get("status");
+            return status instanceof Boolean b && !b ? null : profile;
         } catch (HttpClientErrorException e) {
-            int code = e.getStatusCode().value();
-            if (code == 401 || code == 403) {
-                throw new IllegalStateException("TU API key invalid");
-            }
-            return null;
+            logger.warn("TU API rejected the authentication request with HTTP {}", e.getStatusCode().value());
+            return null; // 4xx = ข้อมูลล็อกอินไม่ถูกต้อง
         }
+    }
+
+    private String profileValue(Map<String, Object> profile, String... keys) {
+        for (String key : keys) {
+            Object value = profile.get(key);
+            if (value instanceof String text && !text.isBlank()) return text;
+        }
+        return null;
     }
 }
