@@ -5,13 +5,14 @@ const esc = (s) =>
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
   }[c]));
 
-const ALLOWED_EMAIL = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
+const EMPLOYEE_ID_PATTERN = /^\d+$/;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 5;
 const API_ORIGIN = 'http://localhost:8080';
 const API_BASE_URL = `${API_ORIGIN}/api`;
 const SESSION_EMAIL_KEY = 'lostAndFoundEmail';
 const SESSION_TOKEN_KEY = 'lostAndFoundToken';
+const SESSION_DISPLAY_NAME_KEY = 'lostAndFoundDisplayName';
 
 const ICONS = {
   wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h5v3h-5a1.5 1.5 0 0 1 0-3z"/>',
@@ -331,38 +332,41 @@ function showLoginMessage(text) {
 }
 
 async function login() {
-  const email = $('em').value.trim().toLowerCase();
+  const employeeId = $('employeeId').value.trim();
   const password = $('pw').value;
-  $('em').value = email;
+  $('employeeId').value = employeeId;
 
-  let emailError = '';
-  if (!email) emailError = 'กรุณากรอกอีเมล';
-  else if (!ALLOWED_EMAIL.test(email)) emailError = 'ใช้ได้เฉพาะอีเมล @dome.tu.ac.th เท่านั้น';
+  let employeeIdError = '';
+  if (!employeeId) employeeIdError = 'กรุณากรอกรหัสประจำตัวบุคลากร';
+  else if (!EMPLOYEE_ID_PATTERN.test(employeeId)) employeeIdError = 'รหัสประจำตัวบุคลากรต้องเป็นตัวเลขเท่านั้น';
 
   const hasInvalidChar = /[^a-zA-Z0-9]/.test(password);
   let passwordError = '';
   if (!password) passwordError = 'กรุณากรอกรหัสผ่าน';
   else if (hasInvalidChar) passwordError = 'รหัสผ่านต้องเป็นภาษาอังกฤษและตัวเลขเท่านั้น';
 
-  $('eEm').textContent = emailError;
+  $('eEmployeeId').textContent = employeeIdError;
   $('ePw').textContent = passwordError;
-  if (emailError || passwordError) return;
+  if (employeeIdError || passwordError) return;
 
   $('lgmsg').hidden = true;
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ employeeId, password }),
     });
     const text = await response.text();
     let data = {};
     try { data = JSON.parse(text); } catch { data = { message: text }; }
-    if (!response.ok || !data.token) throw new Error(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+    if (!response.ok || !data.token) throw new Error(data.message || 'รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง');
 
-    $('who').textContent = data.email;
+    const accountEmail = data.email || data.employeeId;
+    const displayName = data.displayName || accountEmail;
+    $('who').textContent = displayName;
     $('pw').value = '';
-    localStorage.setItem(SESSION_EMAIL_KEY, data.email);
+    localStorage.setItem(SESSION_EMAIL_KEY, accountEmail);
+    localStorage.setItem(SESSION_DISPLAY_NAME_KEY, displayName);
     localStorage.setItem(SESSION_TOKEN_KEY, data.token);
     await loadPosts();
     show('home');
@@ -372,10 +376,10 @@ async function login() {
 }
 
 $('loginBtn').onclick = login;
-['em', 'pw'].forEach((id) => {
+['employeeId', 'pw'].forEach((id) => {
   $(id).onkeydown = (e) => { if (e.key === 'Enter') login(); };
 });
-$('em').onblur = () => ($('em').value = $('em').value.trim().toLowerCase());
+$('employeeId').onblur = () => ($('employeeId').value = $('employeeId').value.trim());
 
 $('pw').oninput = (e) => {
   const hasInvalidChar = /[^a-zA-Z0-9]/.test(e.target.value);
@@ -400,7 +404,8 @@ $('forgot').onclick = (e) => {
 $('logout').onclick = () => {
   localStorage.removeItem(SESSION_EMAIL_KEY);
   localStorage.removeItem(SESSION_TOKEN_KEY);
-  $('em').value = '';
+  localStorage.removeItem(SESSION_DISPLAY_NAME_KEY);
+  $('employeeId').value = '';
   $('who').textContent = '';
   show('login');
 };
@@ -498,13 +503,15 @@ setType('lost');
 async function restoreSession() {
   const token = localStorage.getItem(SESSION_TOKEN_KEY);
   const email = localStorage.getItem(SESSION_EMAIL_KEY);
+  const displayName = localStorage.getItem(SESSION_DISPLAY_NAME_KEY);
   if (!token) {
     localStorage.removeItem(SESSION_EMAIL_KEY);
+    localStorage.removeItem(SESSION_DISPLAY_NAME_KEY);
     show('login');
     return;
   }
 
-  $('who').textContent = email || '';
+  $('who').textContent = displayName || email || '';
   await loadPosts();
   show('home');
 }

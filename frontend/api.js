@@ -7,7 +7,7 @@ const router = express.Router();
 const sessions = new Map();
 const backendUrl = new URL(process.env.BACKEND_URL || 'http://localhost:8080');
 const transport = backendUrl.protocol === 'https:' ? https : http;
-const allowedEmail = /^[a-z0-9._%+-]+@dome\.tu\.ac\.th$/;
+const employeeIdPattern = /^\d+$/;
 
 function getToken(req) {
     const authorization = req.get('authorization') || '';
@@ -98,16 +98,16 @@ function createMultipartPost(post, image) {
 }
 
 router.post('/login', (req, res) => {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const employeeId = typeof req.body?.employeeId === 'string' ? req.body.employeeId.trim() : '';
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
-    if (!allowedEmail.test(email) || !/^[a-zA-Z0-9]+$/.test(password)) {
-        return res.status(400).json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+    if (!employeeIdPattern.test(employeeId) || !/^[a-zA-Z0-9]+$/.test(password)) {
+        return res.status(400).json({ error: 'รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง' });
     }
 
     const token = randomBytes(32).toString('hex');
-    sessions.set(token, email);
-    return res.json({ token, email });
+    sessions.set(token, employeeId);
+    return res.json({ token, employeeId, email: employeeId, displayName: employeeId });
 });
 
 router.post('/logout', (req, res) => {
