@@ -4,6 +4,7 @@ import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.model.PostImage;
 import com.tu.lostandfound.repository.PostImageRepository;
 import com.tu.lostandfound.repository.PostRepository;
+import com.tu.lostandfound.security.JwtService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,17 +35,27 @@ public class PostController {
 
     private final PostRepository postRepository;
     private final PostImageRepository postImageRepository;
+    private final JwtService jwtService;
 
-    public PostController(PostRepository postRepository, PostImageRepository postImageRepository) {
+    public PostController(PostRepository postRepository,
+                          PostImageRepository postImageRepository,
+                          JwtService jwtService) {
         this.postRepository = postRepository;
         this.postImageRepository = postImageRepository;
+        this.jwtService = jwtService;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public ResponseEntity<?> createPost(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestPart("post") Post post,
             @RequestPart(value = "images", required = false) MultipartFile[] images) {
+
+        String employeeId = employeeIdFrom(authorization);
+        if (employeeId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("กรุณาเข้าสู่ระบบก่อนโพสต์");
+        }
 
         if (isBlank(post.getLocation()) || isBlank(post.getContactInfo())) {
             return ResponseEntity.badRequest().body("กรุณากรอกสถานที่และช่องทางติดต่อ");
@@ -67,6 +78,7 @@ public class PostController {
 
         // ไม่เชื่อค่าที่ client ส่งมาในฟิลด์เหล่านี้
         post.setId(null);
+        post.setAuthorEmail(employeeId);
         post.setStatus(Post.PostStatus.pending_review);
         if (post.getType() == null) {
             post.setType(Post.PostType.lost);
@@ -112,7 +124,7 @@ public class PostController {
                 postImage.setPost(savedPost);
                 postImageRepository.save(postImage);
             }
-            return ResponseEntity.ok(savedPost);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedPost);
 
         } catch (IOException e) {
             deleteFiles(savedFiles);
@@ -129,6 +141,13 @@ public class PostController {
             return postRepository.findByStatusOrderByCreatedAtDesc(status);
         }
         return postRepository.findAllByOrderByCreatedAtDesc();
+    }
+
+    private String employeeIdFrom(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return null;
+        }
+        return jwtService.parseEmployeeId(authorization.substring(7));
     }
 
     private static boolean isBlank(String s) {
