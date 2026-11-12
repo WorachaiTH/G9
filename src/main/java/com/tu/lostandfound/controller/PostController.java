@@ -143,6 +143,42 @@ public class PostController {
         return postRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> deletePost(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long id) {
+
+        String employeeId = employeeIdFrom(authorization);
+        if (employeeId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("กรุณาเข้าสู่ระบบก่อนลบโพสต์");
+        }
+
+        Post post = postRepository.findById(id).orElse(null);
+        if (post == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ไม่พบโพสต์นี้");
+        }
+
+        if (!employeeId.equals(post.getAuthorEmail())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("ลบได้เฉพาะโพสต์ของตัวเอง");
+        }
+
+        List<PostImage> images = postImageRepository.findByPostIdOrderBySortOrderAsc(id);
+        List<Path> filesToDelete = new ArrayList<>();
+        for (PostImage image : images) {
+            Path fileName = Paths.get(image.getImageUrl()).getFileName();
+            filesToDelete.add(UPLOAD_PATH.resolve(fileName));
+        }
+
+        postImageRepository.deleteAll(images);
+        postImageRepository.flush();
+        postRepository.delete(post);
+        postRepository.flush();
+
+        deleteFiles(filesToDelete);
+        return ResponseEntity.noContent().build();
+    }
+
     private String employeeIdFrom(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return null;
