@@ -2,8 +2,7 @@ package com.tu.lostandfound.controller;
 
 import com.tu.lostandfound.model.User;
 import com.tu.lostandfound.repository.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import com.tu.lostandfound.security.JwtService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,13 +25,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.security.KeyStore;
-import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,19 +39,19 @@ public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private static final String TU_API_URL = "https://restapi.tu.ac.th/api/v1/auth/ad/verify";
     private static final String EXTRA_ROOT_CERT = "/sectigo-root-r46.der";
-    private static final long TOKEN_TTL_MS = 24L * 60 * 60 * 1000;
 
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
     private final String appKey;
     private final boolean devMode;
-    private final Key secretKey;
+    private final JwtService jwtService;
 
     public AuthController(UserRepository userRepository,
+                          JwtService jwtService,
                           @Value("${tu.api.app-key:}") String appKey,
-                          @Value("${tu.api.dev-mode:false}") boolean devMode,
-                          @Value("${jwt.secret:}") String jwtSecret) {
+                          @Value("${tu.api.dev-mode:false}") boolean devMode) {
         this.userRepository = userRepository;
+        this.jwtService = jwtService;
         this.appKey = appKey;
         this.devMode = devMode;
 
@@ -73,14 +68,6 @@ public class AuthController {
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(5000);
         this.restTemplate = new RestTemplate(factory);
-
-        if (jwtSecret.length() >= 32) {
-            this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-        } else {
-            byte[] random = new byte[32];
-            new SecureRandom().nextBytes(random);
-            this.secretKey = Keys.hmacShaKeyFor(random);
-        }
     }
 
     private static SSLContext buildSslContext() {
@@ -152,12 +139,7 @@ public class AuthController {
         User user = userRepository.findByEmployeeId(normalizedEmployeeId)
                 .orElseGet(() -> userRepository.save(new User(normalizedEmployeeId, "")));
 
-        String token = Jwts.builder()
-                .setSubject(user.getEmployeeId())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + TOKEN_TTL_MS))
-                .signWith(secretKey)
-                .compact();
+        String token = jwtService.createToken(user.getEmployeeId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
