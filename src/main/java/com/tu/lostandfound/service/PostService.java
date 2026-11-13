@@ -2,8 +2,11 @@ package com.tu.lostandfound.service;
 
 import com.tu.lostandfound.dto.PostDto;
 import com.tu.lostandfound.exception.ApiException;
+import com.tu.lostandfound.model.Claim;
+import com.tu.lostandfound.model.ClaimImage;
 import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.model.PostImage;
+import com.tu.lostandfound.repository.ClaimRepository;
 import com.tu.lostandfound.repository.PostImageRepository;
 import com.tu.lostandfound.repository.PostRepository;
 import org.springframework.http.HttpStatus;
@@ -30,13 +33,16 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final PostImageRepository postImageRepository;
+    private final ClaimRepository claimRepository;
     private final UploadService uploadService;
 
     public PostService(PostRepository postRepository,
                        PostImageRepository postImageRepository,
+                       ClaimRepository claimRepository,
                        UploadService uploadService) {
         this.postRepository = postRepository;
         this.postImageRepository = postImageRepository;
+        this.claimRepository = claimRepository;
         this.uploadService = uploadService;
     }
 
@@ -94,7 +100,8 @@ public class PostService {
         post.setId(null);
         post.getImages().clear();
         post.setAuthorEmail(employeeId);
-        post.setStatus(Post.PostStatus.pending_review);
+        post.setStatus(Post.PostStatus.published);
+        post.setGrantedAt(null);
         if (post.getType() == null) {
             post.setType(Post.PostType.lost);
         }
@@ -102,9 +109,10 @@ public class PostService {
         List<MultipartFile> validImages = uploadService.validate(images);
 
         List<Path> savedFiles = new ArrayList<>();
-        try {
-            Post savedPost = postRepository.save(post);
+        uploadService.deleteOnRollback(savedFiles);
 
+        Post savedPost = postRepository.save(post);
+        try {
             int order = 1;
             for (MultipartFile file : validImages) {
                 Path target = uploadService.save(file);
@@ -118,15 +126,10 @@ public class PostService {
                 postImage.setPost(savedPost);
                 savedPost.getImages().add(postImageRepository.save(postImage));
             }
-            return PostDto.from(savedPost, employeeId);
-
         } catch (IOException e) {
-            uploadService.deleteQuietly(savedFiles);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "บันทึกรูปภาพไม่สำเร็จ");
-        } catch (RuntimeException e) {
-            uploadService.deleteQuietly(savedFiles);
-            throw e;
         }
+        return PostDto.from(savedPost, employeeId);
     }
 
     @Transactional
@@ -150,6 +153,37 @@ public class PostService {
         postRepository.flush();
 
         uploadService.deleteQuietly(filesToDelete);
+    }
+
+    @Transactional
+    public void deleteExpired(Long id) {
+        postRepository.findByIdForUpdate(id)
+                .filter(post -> post.getStatus() == Post.PostStatus.returned)
+                .ifPresent(this::removeWithFiles);
+    }
+
+    private void removeWithFiles(Post post) {
+        List<Path> filesToDelete = new ArrayList<>();
+
+        List<Claim> claims = claimRepository.findByPostIdOrderByCreatedAtDesc(post.getId());
+        for (Claim claim : claims) {
+            for (ClaimImage image : claim.getImages()) {
+                filesToDelete.add(uploadService.pathOf(image.getImageUrl()));
+            }
+        }
+
+        List<PostImage> images = postImageRepository.findByPostIdOrderBySortOrderAsc(post.getId());
+        for (PostImage image : images) {
+            filesToDelete.add(uploadService.pathOf(image.getImageUrl()));
+        }
+
+        claimRepository.deleteAll(claims);
+        postImageRepository.deleteAll(images);
+        post.getImages().clear();
+        postRepository.delete(post);
+        postRepository.flush();
+
+        uploadService.deleteAfterCommit(filesToDelete);
     }
 
     private static boolean isBlank(String s) {

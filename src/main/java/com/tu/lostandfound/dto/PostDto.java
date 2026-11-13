@@ -18,6 +18,7 @@ public record PostDto(
         Post.PostStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        LocalDateTime grantedAt,
         List<ImageDto> images,
         boolean mine) {
 
@@ -41,6 +42,7 @@ public record PostDto(
                 post.getStatus(),
                 post.getCreatedAt(),
                 post.getUpdatedAt(),
+                post.getGrantedAt(),
                 images,
                 mine);
     }

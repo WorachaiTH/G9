@@ -56,13 +56,16 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private PostStatus status = PostStatus.pending_review;
+    private PostStatus status = PostStatus.published;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "granted_at")
+    private LocalDateTime grantedAt;
 
     @OneToMany(mappedBy = "post", fetch = FetchType.EAGER)
     @OrderBy("sortOrder ASC")
@@ -120,6 +123,9 @@ public class Post {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public LocalDateTime getGrantedAt() { return grantedAt; }
+    public void setGrantedAt(LocalDateTime grantedAt) { this.grantedAt = grantedAt; }
 
     public List<PostImage> getImages() { return images; }
 }
