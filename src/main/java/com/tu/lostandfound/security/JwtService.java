@@ -1,9 +1,11 @@
 package com.tu.lostandfound.security;
 
+import com.tu.lostandfound.exception.ApiException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -15,6 +17,7 @@ import java.util.Date;
 public class JwtService {
 
     private static final long TOKEN_TTL_MS = 24L * 60 * 60 * 1000;
+    private static final String BEARER_PREFIX = "Bearer ";
     private final Key secretKey;
 
     public JwtService(@Value("${jwt.secret:}") String jwtSecret) {
@@ -43,5 +46,20 @@ public class JwtService {
         } catch (JwtException | IllegalArgumentException e) {
             return null;
         }
+    }
+
+    public String employeeIdFromHeader(String authorization) {
+        if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
+            return null;
+        }
+        return parseEmployeeId(authorization.substring(BEARER_PREFIX.length()));
+    }
+
+    public String requireEmployeeId(String authorization, String message) {
+        String employeeId = employeeIdFromHeader(authorization);
+        if (employeeId == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, message);
+        }
+        return employeeId;
     }
 }

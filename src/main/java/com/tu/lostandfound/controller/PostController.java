@@ -1,6 +1,7 @@
 package com.tu.lostandfound.controller;
 
-import com.tu.lostandfound.exception.ApiException;
+import com.tu.lostandfound.dto.PostDto;
+import com.tu.lostandfound.dto.PostUpdateRequest;
 import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.security.JwtService;
 import com.tu.lostandfound.service.PostService;
@@ -26,19 +27,36 @@ public class PostController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Post> createPost(
+    public ResponseEntity<PostDto> createPost(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestPart("post") Post post,
             @RequestPart(value = "images", required = false) MultipartFile[] images) {
 
-        String employeeId = requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนโพสต์");
-        Post savedPost = postService.create(post, images, employeeId);
+        String employeeId = jwtService.requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนโพสต์");
+        PostDto savedPost = postService.create(post, images, employeeId);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedPost);
     }
 
     @GetMapping
-    public List<Post> getAllPosts(@RequestParam(required = false) Post.PostStatus status) {
-        return postService.list(status);
+    public List<PostDto> getAllPosts(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Post.PostStatus status) {
+
+        String viewerId = jwtService.employeeIdFromHeader(authorization);
+        return postService.search(q, status, viewerId);
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PostDto updatePost(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long id,
+            @RequestPart(value = "post", required = false) PostUpdateRequest request,
+            @RequestPart(value = "newImages", required = false) MultipartFile[] newImages,
+            @RequestParam(value = "removeImageIds", required = false) List<Long> removeImageIds) {
+
+        String employeeId = jwtService.requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนแก้ไขโพสต์");
+        return postService.update(id, employeeId, request, newImages, removeImageIds);
     }
 
     @DeleteMapping("/{id}")
@@ -46,19 +64,8 @@ public class PostController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable Long id) {
 
-        String employeeId = requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนลบโพสต์");
+        String employeeId = jwtService.requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนลบโพสต์");
         postService.delete(id, employeeId);
         return ResponseEntity.noContent().build();
-    }
-
-    private String requireEmployeeId(String authorization, String message) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, message);
-        }
-        String employeeId = jwtService.parseEmployeeId(authorization.substring(7));
-        if (employeeId == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, message);
-        }
-        return employeeId;
     }
 }
