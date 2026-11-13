@@ -70,6 +70,15 @@ public class PostService {
         return posts.stream().map(post -> PostDto.from(post, viewerId)).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<PostDto> listMine(String employeeId, String q, Post.PostStatus status) {
+        String keyword = normalizeKeyword(q);
+        String pattern = keyword == null ? null : "%" + keyword + "%";
+        return postRepository.findMine(employeeId, pattern, status).stream()
+                .map(post -> PostDto.from(post, employeeId))
+                .toList();
+    }
+
     static String normalizeKeyword(String q) {
         if (q == null) return null;
         String cleaned = q.trim().replaceAll("\\s+", " ");
