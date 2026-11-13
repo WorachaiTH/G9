@@ -1,4 +1,4 @@
-// แทนที่ <div data-include="path.html"> ด้วยเนื้อหาไฟล์ HTML นั้น ๆ
+// เชื่อม HTML แต่ละหน้า
 export async function mountComponents(root = document) {
   const nodes = [...root.querySelectorAll('[data-include]')];
   await Promise.all(nodes.map(async (el) => {

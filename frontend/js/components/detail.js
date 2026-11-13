@@ -6,7 +6,7 @@ import { lb } from './lightbox.js';
 import { setupOwnerMenu } from './detail-owner.js';
 import { setupClaims } from './detail-claims.js';
 import { setupContactForm } from './detail-contact.js';
-
+// รายละเอียดโพสต์
 export let dm = null;
 
 export function dmKey(e) {

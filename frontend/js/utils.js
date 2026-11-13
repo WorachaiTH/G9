@@ -1,3 +1,4 @@
+// ฟังก์ชันช่วยทั่วไป
 import { API_ORIGIN } from './config.js';
 
 export const $ = (id) => document.getElementById(id);

@@ -1,7 +1,7 @@
 import { $, esc } from '../utils.js';
 import { API_BASE_URL, ICONS } from '../config.js';
 import { posts, statusBadge, purgeNote, normalizePost } from '../posts.js';
-
+// สลับtab ของหาย/เจอของ
 export let tab = 'lost';
 
 export function postCard(p, index) {

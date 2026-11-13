@@ -1,3 +1,4 @@
+// สลับหน้า
 import { $ } from './utils.js';
 
 export function show(view) {

@@ -1,6 +1,6 @@
 import { esc } from '../utils.js';
 import { dm } from './detail.js';
-
+// ดูรูปเต็ม
 export let lb = null;
 let lbSource = null;
 

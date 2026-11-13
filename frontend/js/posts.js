@@ -1,3 +1,4 @@
+// ข้อมูลโพสต์
 import { fullImageUrl } from './utils.js';
 import { DELETE_AFTER_DAYS } from './config.js';
 

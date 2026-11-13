@@ -1,3 +1,4 @@
+// จัดการsession เช็คเจ้าของโพสต์
 import { $ } from './utils.js';
 import { SESSION_EMAIL_KEY, SESSION_TOKEN_KEY, SESSION_EMPLOYEE_ID_KEY, SESSION_DISPLAY_NAME_KEY, MY_POSTS_KEY } from './config.js';
 import { show } from './views.js';

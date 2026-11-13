@@ -1,3 +1,4 @@
+// ค่าคงที่
 export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const EMPLOYEE_ID_PATTERN = /^\d+$/;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

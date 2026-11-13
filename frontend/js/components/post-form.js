@@ -4,7 +4,7 @@ import { posts, normalizePost } from '../posts.js';
 import { rememberMyPost } from '../session.js';
 import { show } from '../views.js';
 import { render, loadPosts, setTab } from './feed.js';
-
+// ฟอร์มเพิ่มโพสต์
 $('file').multiple = true;
 
 let photoFiles = [];
