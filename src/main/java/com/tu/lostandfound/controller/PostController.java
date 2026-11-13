@@ -1,6 +1,7 @@
 package com.tu.lostandfound.controller;
 
 import com.tu.lostandfound.dto.PostDto;
+import com.tu.lostandfound.dto.PostUpdateRequest;
 import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.security.JwtService;
 import com.tu.lostandfound.service.PostService;
@@ -44,6 +45,18 @@ public class PostController {
 
         String viewerId = jwtService.employeeIdFromHeader(authorization);
         return postService.search(q, status, viewerId);
+    }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public PostDto updatePost(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long id,
+            @RequestPart(value = "post", required = false) PostUpdateRequest request,
+            @RequestPart(value = "newImages", required = false) MultipartFile[] newImages,
+            @RequestParam(value = "removeImageIds", required = false) List<Long> removeImageIds) {
+
+        String employeeId = jwtService.requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนแก้ไขโพสต์");
+        return postService.update(id, employeeId, request, newImages, removeImageIds);
     }
 
     @DeleteMapping("/{id}")

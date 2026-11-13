@@ -1,6 +1,7 @@
 package com.tu.lostandfound.service;
 
 import com.tu.lostandfound.dto.PostDto;
+import com.tu.lostandfound.dto.PostUpdateRequest;
 import com.tu.lostandfound.exception.ApiException;
 import com.tu.lostandfound.model.Claim;
 import com.tu.lostandfound.model.ClaimImage;
@@ -28,6 +29,10 @@ public class PostService {
             Post.PostStatus.pending_review,
             Post.PostStatus.published,
             Post.PostStatus.claimed);
+
+    static final Set<Post.PostStatus> EDITABLE_STATUSES = Set.of(
+            Post.PostStatus.pending_review,
+            Post.PostStatus.published);
 
     static final int MAX_KEYWORD_LENGTH = 100;
 
@@ -130,6 +135,100 @@ public class PostService {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "บันทึกรูปภาพไม่สำเร็จ");
         }
         return PostDto.from(savedPost, employeeId);
+    }
+
+    @Transactional
+    public PostDto update(Long id, String employeeId, PostUpdateRequest request,
+                          MultipartFile[] newImages, List<Long> removeImageIds) {
+        Post post = postRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ไม่พบโพสต์นี้"));
+
+        if (!employeeId.equals(post.getAuthorEmail())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "แก้ไขได้เฉพาะโพสต์ของตัวเอง");
+        }
+        if (!EDITABLE_STATUSES.contains(post.getStatus())) {
+            throw new ApiException(HttpStatus.CONFLICT, "โพสต์นี้มีคำขอรับอยู่หรือปิดไปแล้ว จึงแก้ไขไม่ได้");
+        }
+
+        if (request == null || isBlank(request.description())
+                || isBlank(request.location()) || isBlank(request.contactInfo())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "กรุณากรอกรายละเอียด สถานที่ และช่องทางติดต่อให้ครบ");
+        }
+        String contactName = isBlank(request.contactName()) ? null : request.contactName().trim();
+        if (contactName != null && contactName.length() > 100) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "ชื่อผู้ติดต่อยาวเกินกำหนด");
+        }
+
+        List<PostImage> toRemove = findImagesToRemove(post.getId(), removeImageIds);
+        List<MultipartFile> validImages = uploadService.validate(newImages);
+        int remaining = post.getImages().size() - toRemove.size();
+        if (remaining + validImages.size() > UploadService.MAX_POST_IMAGES) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "แนบรูปได้สูงสุด " + UploadService.MAX_POST_IMAGES + " รูป");
+        }
+
+        String description = request.description().trim();
+        String title = isBlank(request.title()) ? description : request.title().trim();
+        if (title.length() > 255) {
+            title = title.substring(0, 255);
+        }
+        post.setTitle(title);
+        post.setDescription(description);
+        post.setLocation(request.location().trim());
+        post.setContactName(contactName);
+        post.setContactInfo(request.contactInfo().trim());
+        post.setContactType(request.contactType());
+
+        List<Path> removedFiles = new ArrayList<>();
+        for (PostImage image : toRemove) {
+            removedFiles.add(uploadService.pathOf(image.getImageUrl()));
+        }
+        postImageRepository.deleteAll(toRemove);
+        post.getImages().removeAll(toRemove);
+
+        int order = post.getImages().stream()
+                .map(PostImage::getSortOrder)
+                .filter(sortOrder -> sortOrder != null)
+                .mapToInt(Short::intValue)
+                .max()
+                .orElse(0) + 1;
+
+        List<Path> savedFiles = new ArrayList<>();
+        uploadService.deleteOnRollback(savedFiles);
+        try {
+            for (MultipartFile file : validImages) {
+                Path target = uploadService.save(file);
+                savedFiles.add(target);
+
+                PostImage postImage = new PostImage();
+                postImage.setImageUrl(uploadService.urlOf(target));
+                postImage.setMimeType(file.getContentType());
+                postImage.setSizeBytes((int) file.getSize());
+                postImage.setSortOrder((short) order++);
+                postImage.setPost(post);
+                post.getImages().add(postImageRepository.save(postImage));
+            }
+        } catch (IOException e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "บันทึกรูปภาพไม่สำเร็จ");
+        }
+
+        Post saved = postRepository.save(post);
+        uploadService.deleteAfterCommit(removedFiles);
+        return PostDto.from(saved, employeeId);
+    }
+
+    private List<PostImage> findImagesToRemove(Long postId, List<Long> removeImageIds) {
+        if (removeImageIds == null || removeImageIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = removeImageIds.stream().filter(imageId -> imageId != null).distinct().toList();
+        List<PostImage> images = postImageRepository.findAllById(ids);
+        boolean allBelongToPost = images.size() == ids.size()
+                && images.stream().allMatch(image -> postId.equals(image.getPost().getId()));
+        if (!allBelongToPost) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "มีรูปที่จะลบไม่ใช่รูปของโพสต์นี้");
+        }
+        return images;
     }
 
     @Transactional
