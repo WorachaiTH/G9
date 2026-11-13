@@ -134,25 +134,14 @@ public class PostService {
 
     @Transactional
     public void delete(Long id, String employeeId) {
-        Post post = postRepository.findById(id)
+        Post post = postRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ไม่พบโพสต์นี้"));
 
         if (!employeeId.equals(post.getAuthorEmail())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "ลบได้เฉพาะโพสต์ของตัวเอง");
         }
 
-        List<PostImage> images = postImageRepository.findByPostIdOrderBySortOrderAsc(id);
-        List<Path> filesToDelete = new ArrayList<>();
-        for (PostImage image : images) {
-            filesToDelete.add(uploadService.pathOf(image.getImageUrl()));
-        }
-
-        postImageRepository.deleteAll(images);
-        postImageRepository.flush();
-        postRepository.delete(post);
-        postRepository.flush();
-
-        uploadService.deleteQuietly(filesToDelete);
+        removeWithFiles(post);
     }
 
     @Transactional
