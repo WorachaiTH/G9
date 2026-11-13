@@ -1,0 +1,43 @@
+<div id="form" hidden>
+      <div class="headbox">
+        <div class="top"><button class="back" id="back" type="button" aria-label="กลับ">←</button>
+          <h1>เพิ่มโพสต์</h1>
+        </div>
+        <p class="sub" id="fsub"></p>
+
+        <div class="seg"><button id="sL" type="button">ฉันทำของหาย</button><button id="sF"
+            type="button">ฉันเจอของ</button></div>
+
+        <div class="card c1">
+          <h2><span class="n">1</span>รูปภาพ <span class="hint" id="opt"></span></h2>
+          <div class="drop" id="drop" tabindex="0">
+            <div style="font-size:2rem">📷</div><b>แตะเพื่อถ่ายรูปหรือเลือกรูป</b><span>PNG, JPEG, WEBP ไม่เกิน 5 MB</span>
+          </div>
+          <div class="prev" id="prev" hidden><img id="img" alt="รูปสิ่งของ"><button type="button"
+              id="rm">เปลี่ยนรูป</button></div>
+          <input type="file" id="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <div class="err" id="eImg"></div>
+        </div>
+
+        <div class="card c2">
+          <h2><span class="n">2</span>รายละเอียด / สถานที่</h2>
+          <label for="desc">รายละเอียดของสิ่งของ</label>
+          <textarea id="desc" placeholder="เช่น กระเป๋าสตางค์สีน้ำตาล มีบัตรนักศึกษา 1 ใบ"></textarea>
+          <div class="err" id="eDesc"></div>
+          <label for="loc" id="locL"></label>
+          <input id="loc" placeholder="เช่น โรงอาหารsc, ตึกsc1 ห้อง1001">
+          <div class="err" id="eLoc"></div>
+        </div>
+
+        <div class="card c3">
+          <h2><span class="n">3</span>ติดต่อผู้แจ้ง</h2>
+          <label for="name">ชื่อ</label>
+          <input id="name" placeholder="ชื่อ-นามสกุล หรือชื่อเล่น">
+          <div class="err" id="eName"></div>
+          <label for="tel">เบอร์โทร / LINE ID / อีเมล</label>
+          <input id="tel" placeholder="เช่น 08x-xxx-xxxx หรือ lineid">
+          <div class="err" id="eTel"></div>
+        </div>
+      </div>
+      <button class="btn" id="post" type="button">โพสต์</button>
+    </div>

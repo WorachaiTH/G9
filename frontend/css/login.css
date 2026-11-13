@@ -1,0 +1,83 @@
+.lg-banner {
+  width: 80%;
+  max-height: 180px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 18px;
+}
+
+.fld {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 14px;
+  padding: 0 12px;
+}
+
+.fld:focus-within {
+  outline: 2px solid var(--pri);
+  border-color: transparent;
+}
+
+.fld svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke: var(--mut);
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fld input {
+  border: 0;
+  background: none;
+  padding: 14px 0;
+  border-radius: 0;
+}
+
+.fld input:focus {
+  outline: none;
+}
+
+.fld button {
+  border: 0;
+  background: none;
+  padding: 6px;
+  cursor: pointer;
+  display: grid;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 6px;
+}
+
+.row a {
+  font-size: .85rem;
+  color: var(--pri-ink);
+  text-decoration: none;
+}
+
+.lg .btn {
+  margin-top: 18px;
+}
+
+@media (min-width: 960px) {
+.lg {
+    display: block;
+    max-width: 520px;
+    margin: 40px auto 0;
+  }
+.lg-form {
+    background: var(--card);
+    border: 1px solid var(--bd);
+    border-radius: 20px;
+    padding: 32px;
+  }
+}
