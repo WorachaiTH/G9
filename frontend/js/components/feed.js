@@ -1,6 +1,7 @@
 import { $, esc } from '../utils.js';
 import { API_BASE_URL, ICONS } from '../config.js';
 import { posts, statusBadge, purgeNote, normalizePost } from '../posts.js';
+import { hasActiveFilters, matchesFilters } from './filter.js';
 // สลับtab ของหาย/เจอของ
 export let tab = 'lost';
 
@@ -55,11 +56,11 @@ export async function loadPosts() {
 export function render() {
   const visible = posts.map((p, index) => ({ p, index })).filter((x) => x.p.status !== 'granted');
   [['lost', 'L'], ['found', 'F']].forEach(([kind, key]) => {
-    const items = visible.filter((x) => x.p.type === kind);
+    const items = visible.filter((x) => x.p.type === kind && matchesFilters(x.p));
 
     $('feed' + key).innerHTML =
       items.map((x) => postCard(x.p, x.index)).join('') ||
-      '<p class="meta">ยังไม่มีรายการ</p>';
+      `<p class="meta">${hasActiveFilters() ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ยังไม่มีรายการ'}</p>`;
     $('n' + key).textContent = items.length;
   });
 

@@ -1,4 +1,5 @@
 import { render } from './components/feed.js';
+import { initFilters } from './components/filter.js';
 import { setType } from './components/post-form.js';
 import { openLightbox } from './components/lightbox.js';
 import { openDetail } from './components/detail.js';
@@ -22,6 +23,7 @@ document.addEventListener('click', (e) => {
   if (card) openDetail(Number(card.dataset.i));
 });
 
+initFilters(render);
 render();
 setType('lost');
 restoreSession();
