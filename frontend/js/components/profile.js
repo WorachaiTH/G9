@@ -1,3 +1,14 @@
+import { $, errorText as getErrorText, esc } from '../utils.js';
+import {
+  API_BASE_URL,
+  SESSION_DISPLAY_NAME_KEY,
+  SESSION_EMAIL_KEY,
+  SESSION_EMPLOYEE_ID_KEY,
+  SESSION_TOKEN_KEY,
+} from '../config.js';
+import { normalizePost } from '../posts.js';
+import { show } from '../views.js';
+
 (() => {
   const PROFILE_KEY = 'lostAndFoundProfile';
   const TYPE_LABEL = { lost: 'ของหาย', found: 'เจอของ' };
@@ -31,6 +42,7 @@
     const sessionEmail = localStorage.getItem(SESSION_EMAIL_KEY) || ''; 
     const employeeId = String(
       saved.employeeId ||
+      localStorage.getItem(SESSION_EMPLOYEE_ID_KEY) ||
       employeeIdFromToken(localStorage.getItem(SESSION_TOKEN_KEY) || '') ||
       (/^\d+$/.test(sessionEmail) ? sessionEmail : '')
     );
@@ -69,16 +81,30 @@
   async function loadMine() {
     const mySeq = ++seq;
     const id = currentProfile().employeeId;
+    const token = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (!token) {
+      phase = 'error';
+      errorText = 'กรุณาเข้าสู่ระบบใหม่';
+      renderFeed();
+      return;
+    }
+
     phase = 'loading';
     renderFeed();
     try {
-      const response = await fetch(`${API_BASE_URL}/posts`);
+      const response = await fetch(`${API_BASE_URL}/posts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (mySeq !== seq) return;
-      if (!response.ok) throw new Error(`โหลดโพสต์ไม่สำเร็จ (${response.status})`);
+      if (!response.ok) {
+        throw new Error(await getErrorText(response, 'โหลดโพสต์ไม่สำเร็จ'));
+      }
       const data = await response.json();
       if (mySeq !== seq) return;
       if (!Array.isArray(data)) throw new Error('รูปแบบข้อมูลโพสต์จาก backend ไม่ถูกต้อง');
-      mine = id ? data.filter((p) => String(p.authorEmail) === id).map(normalizePost) : [];
+      mine = id
+        ? data.filter((p) => String(p.authorEmail || '') === id).map(normalizePost)
+        : [];
       phase = 'ready';
     } catch (error) {
       if (mySeq !== seq) return;
@@ -121,7 +147,8 @@
       <div class="pr-body">
         <p class="pr-name">${esc(p.desc)}</p>
         <div class="pr-meta">${PIN_ICON}<span>${esc(p.place)}</span></div>
-        <div class="pr-meta">${CLOCK_ICON}<span>${esc(p.time)}</span></div>
+        ${p.timeRange ? `<div class="pr-meta">${CLOCK_ICON}<span>ช่วงเวลาที่${p.type === 'lost' ? 'ทำหาย' : 'พบ'}: ${esc(p.timeRange)}</span></div>` : ''}
+        <div class="pr-meta">${CLOCK_ICON}<span>โพสต์เมื่อ: ${esc(p.time)}</span></div>
         <button type="button" class="pr-btn">ติดต่อเจ้าของโพสต์</button>
         <div class="pr-ctv" hidden>${esc(p.name)} · ${esc(p.contact)}</div>
       </div>

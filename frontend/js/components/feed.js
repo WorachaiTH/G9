@@ -25,7 +25,8 @@ export function postCard(p, index) {
           <p><b>${esc(p.desc)}</b></p>
         </div>
         <div class="meta">${isLost ? 'หายที่' : 'พบที่'}: ${esc(p.place)}</div>
-        <div class="meta">เวลา: ${esc(p.time)}</div>
+        ${p.timeRange ? `<div class="meta">ช่วงเวลาที่${isLost ? 'ทำหาย' : 'พบ'}: ${esc(p.timeRange)}</div>` : ''}
+        <div class="meta">โพสต์เมื่อ: ${esc(p.time)}</div>
         ${purgeNote(p) ? `<div class="meta">${esc(purgeNote(p))}</div>` : ''}
         <button type="button" class="ct">ดูเพิ่มเติม</button>
       </div>

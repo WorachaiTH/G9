@@ -63,8 +63,8 @@ export function renderPreviews() {
 export function resetForm() {
   photoFiles.forEach((p) => URL.revokeObjectURL(p.url));
   photoFiles = [];
-  ['desc', 'loc', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));
-  ['eImg', 'eDesc', 'eLoc', 'eName', 'eTel'].forEach((id) => ($(id).textContent = ''));
+  ['desc', 'loc', 'timeFrom', 'timeTo', 'name', 'tel', 'file'].forEach((id) => ($(id).value = ''));
+  ['eImg', 'eDesc', 'eLoc', 'eTimeRange', 'eName', 'eTel'].forEach((id) => ($(id).textContent = ''));
   renderPreviews();
 }
 
@@ -89,6 +89,8 @@ export async function submitPost() {
     title: $('desc').value.trim(),
     description: $('desc').value.trim(),
     location: $('loc').value.trim(),
+    timeFrom: $('timeFrom').value,
+    timeTo: $('timeTo').value,
     name: $('name').value.trim(),
     contact: $('tel').value.trim(),
     type,
@@ -97,6 +99,9 @@ export async function submitPost() {
     eImg: photoFiles.length || type === 'lost' ? '' : 'กรุณาเพิ่มรูปภาพ',
     eDesc: v.title ? '' : 'กรุณาใส่รายละเอียด',
     eLoc: v.location ? '' : 'กรุณาใส่สถานที่',
+    eTimeRange: Boolean(v.timeFrom) === Boolean(v.timeTo)
+      ? ''
+      : 'กรุณาระบุเวลาเริ่มต้นและสิ้นสุดให้ครบ',
     eName: v.name ? '' : 'กรุณาใส่ชื่อ',
     eTel: v.contact ? '' : 'กรุณาใส่ช่องทางติดต่อ',
   };
@@ -115,6 +120,8 @@ export async function submitPost() {
       title: v.title.slice(0, 100),
       description: v.description,
       location: v.location,
+      timeFrom: v.timeFrom || null,
+      timeTo: v.timeTo || null,
       contactName: v.name,
       contactInfo: v.contact,
       authorEmail: localStorage.getItem(SESSION_EMAIL_KEY) || 'anonymous@tu.ac.th',
