@@ -31,7 +31,7 @@ export function normalizePost(post) {
     authorEmail: post.authorEmail || '',
     ownerFlag: [post.owner, post.isOwner, post.mine].find((v) => typeof v === 'boolean') ?? null,
     authorIds: [post.authorEmail, post.authorId, post.authorEmployeeId, post.employeeId]
-      .filter(Boolean).map((v) => String(v).toLowerCase()),
+      .filter(Boolean).map((v) => String(v).trim().toLowerCase()),
     grantedAt: post.grantedAt || null,
     status: mapPostStatus(post.status),
     type: isFound ? 'found' : 'lost',

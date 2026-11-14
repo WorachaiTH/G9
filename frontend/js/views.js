@@ -6,7 +6,10 @@ export function show(view) {
   $('form').hidden = view !== 'form'; $('app-nav').hidden = view === 'login';
 
   if ($('navHome') && $('navAdd')) {
-    $('navHome').classList.toggle('active', view === 'home'); $('navAdd').classList.toggle('active', view === 'form');
+    const mine = $('navMine')?.getAttribute('aria-pressed') === 'true';
+    $('navHome').classList.toggle('active', view === 'home' && !mine);
+    $('navMine')?.classList.toggle('active', view === 'home' && mine);
+    $('navAdd').classList.toggle('active', view === 'form');
   }
 
   document.body.classList.toggle('plaid', view !== 'login');

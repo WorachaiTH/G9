@@ -3,6 +3,33 @@
         <h1>ศูนย์ของหาย–ของเจอ</h1>
         <p class="sub">ดูรายการแจ้งของหายและของที่มีคนเจอ หรือเพิ่มโพสต์ของคุณ</p>
         <div class="toast" id="toast" hidden>โพสต์ของคุณถูกเพิ่มแล้ว</div>
+        <h2 class="feed-mode-label" id="feedModeLabel">รายการโพสต์</h2>
+        <form class="post-filters" id="postFilters">
+          <label for="filterType">ประเภท</label>
+          <select id="filterType">
+            <option value="">ทุกประเภท</option>
+            <option value="lost">ของหาย</option>
+            <option value="found">พบของ</option>
+          </select>
+          <label for="filterStatus">สถานะ</label>
+          <select id="filterStatus">
+            <option value="">ทุกสถานะ</option>
+            <option value="pending_review">รอยืนยัน</option>
+            <option value="published">เปิดรับคำขอ</option>
+            <option value="claimed">มีคำขอแล้ว</option>
+            <option value="returned">ส่งมอบแล้ว</option>
+            <option value="expired">หมดอายุ</option>
+            <option value="hidden">ซ่อน</option>
+          </select>
+          <label for="filterLocation">สถานที่</label>
+          <input id="filterLocation" type="search" placeholder="ค้นหาสถานที่">
+          <label for="filterKeyword">คำค้น</label>
+          <input id="filterKeyword" type="search" placeholder="ชื่อสิ่งของหรือรายละเอียด">
+          <div class="filter-actions">
+            <button class="btn" type="submit">ค้นหา</button>
+            <button class="filter-clear" id="clearPostFilters" type="button">ล้างตัวกรอง</button>
+          </div>
+        </form>
         <div class="seg tabs"><button id="tL" class="on l" type="button">ของหาย</button><button id="tF"
             type="button">เจอของ</button></div>
         <div id="cols">

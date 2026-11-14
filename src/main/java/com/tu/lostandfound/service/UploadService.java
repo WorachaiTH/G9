@@ -20,10 +20,17 @@ public class UploadService {
     private static final Path UPLOAD_PATH = Paths.get("uploads");
     private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
     private static final int MAX_IMAGES = 5;
-    private static final Map<String, String> ALLOWED_TYPES =
-            Map.of("image/jpeg", ".jpg", "image/png", ".png");
+    private static final Map<String, String> ALLOWED_TYPES = Map.of(
+            "image/jpeg", ".jpg",
+            "image/jpg", ".jpg",
+            "image/png", ".png",
+            "image/webp", ".webp");
 
     public List<MultipartFile> validate(MultipartFile[] images) {
+        return validate(images, MAX_IMAGES);
+    }
+
+    public List<MultipartFile> validate(MultipartFile[] images, int maxImages) {
         List<MultipartFile> validImages = new ArrayList<>();
         if (images != null) {
             for (MultipartFile file : images) {
@@ -32,24 +39,33 @@ public class UploadService {
                     throw new ApiException(HttpStatus.BAD_REQUEST, "ขนาดไฟล์รูปภาพเกินกำหนด (สูงสุด 5MB)");
                 }
                 String contentType = file.getContentType();
-                if (contentType == null || !ALLOWED_TYPES.containsKey(contentType)) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, "รองรับเฉพาะไฟล์รูปภาพ JPG, PNG เท่านั้น");
+                if (contentType == null || !ALLOWED_TYPES.containsKey(contentType.toLowerCase())) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "รองรับเฉพาะไฟล์รูปภาพ PNG, JPEG, JPG และ WEBP เท่านั้น");
                 }
                 validImages.add(file);
             }
         }
-        if (validImages.size() > MAX_IMAGES) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "แนบรูปได้สูงสุด 5 รูป");
+        if (validImages.size() > maxImages) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "แนบรูปได้สูงสุด " + maxImages + " รูป");
         }
         return validImages;
     }
 
     public Path save(MultipartFile file) throws IOException {
         Files.createDirectories(UPLOAD_PATH);
-        String fileName = UUID.randomUUID() + ALLOWED_TYPES.get(file.getContentType());
+        String fileName = UUID.randomUUID() + extensionFor(file);
         Path target = UPLOAD_PATH.resolve(fileName);
         Files.copy(file.getInputStream(), target);
         return target;
+    }
+
+    private String extensionFor(MultipartFile file) {
+        String contentType = file.getContentType();
+        String extension = contentType == null ? null : ALLOWED_TYPES.get(contentType.toLowerCase());
+        if (extension == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "ชนิดไฟล์รูปภาพไม่รองรับ");
+        }
+        return extension;
     }
 
     public String urlOf(Path file) {

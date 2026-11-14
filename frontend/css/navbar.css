@@ -101,4 +101,16 @@
 .user-email {
     display: none;
   }
+.nav-container {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+.nav-menu {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+.nav-link {
+    padding: 6px 10px;
+  }
 }

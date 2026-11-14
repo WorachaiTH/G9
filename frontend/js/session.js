@@ -24,7 +24,7 @@ export function rememberMyPost(id) {
 export function isOwner(p) {
   if (typeof p.ownerFlag === 'boolean') return p.ownerFlag;
   const mine = [localStorage.getItem(SESSION_EMAIL_KEY), localStorage.getItem(SESSION_EMPLOYEE_ID_KEY)]
-    .filter(Boolean).map((v) => String(v).toLowerCase());
+    .filter(Boolean).map((v) => String(v).trim().toLowerCase());
   if (p.authorIds.some((a) => mine.includes(a))) return true;
   return p.id != null && myPostIds().includes(String(p.id));
 }
