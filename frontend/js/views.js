@@ -3,7 +3,7 @@ import { $ } from './utils.js';
 
 export function show(view) {
   $('login').hidden = view !== 'login'; $('home').hidden = view !== 'home';
-  $('form').hidden = view !== 'form'; $('app-nav').hidden = view === 'login';
+ $('form').hidden = view !== 'form'; $('profile').hidden = view !== 'profile'; $('app-nav').hidden = view === 'login';
 
   if ($('navHome') && $('navAdd')) {
     $('navHome').classList.toggle('active', view === 'home'); $('navAdd').classList.toggle('active', view === 'form');
@@ -11,4 +11,5 @@ export function show(view) {
 
   document.body.classList.toggle('plaid', view !== 'login');
   window.scrollTo(0, 0);
+  document.dispatchEvent(new CustomEvent('viewchange', { detail: view }));
 }
