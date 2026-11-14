@@ -1,0 +1,231 @@
+.colh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  min-height: 44px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.cnt {
+  font-size: .8rem;
+  font-weight: 600;
+  min-width: 28px;
+  text-align: center;
+  border-radius: 20px;
+  padding: 2px 9px;
+  background: var(--pri);
+  color: var(--pt);
+}
+
+.col.l .cnt {
+  background: var(--lsoft);
+  color: var(--lost-ink);
+}
+
+.col.f .cnt {
+  background: var(--fsoft);
+  color: var(--found-ink);
+}
+
+.tabs {
+  margin-bottom: 16px;
+}
+
+#cols {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+#feedL>.meta,
+#feedF>.meta {
+  background: var(--field);
+  border: 1px dashed var(--bd);
+  border-radius: 12px;
+  padding: 20px 12px;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.post {
+  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ph {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: var(--fsoft);
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.col.l .ph {
+  background: var(--lsoft);
+}
+
+.ph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ph svg {
+  width: 56px;
+  height: 56px;
+  stroke: var(--found-ink);
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.col.l .ph svg {
+  stroke: var(--lost-ink);
+}
+
+.pb {
+  padding: 0;
+}
+
+.post-desc-bg {
+  background: var(--field);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  word-break: break-word;
+}
+
+.post-desc-bg p {
+  margin: 0;
+  color: var(--tx);
+  line-height: 1.5;
+  font-size: 0.98rem;
+}
+
+.meta {
+  font-size: .88rem;
+  color: var(--mut);
+  margin-bottom: 4px;
+}
+
+.ct {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid var(--found-ink);
+  color: var(--found-ink);
+  background: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ct:hover {
+  background: var(--found-ink);
+  color: var(--found-tx);
+}
+
+.col.l .ct {
+  border-color: var(--lost-ink);
+  color: var(--lost-ink);
+}
+
+.col.l .ct:hover {
+  background: var(--lost-ink);
+  color: var(--lost-tx);
+}
+
+.ctv {
+  margin-top: 10px;
+  background: var(--fsoft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: .9rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.col.l .ctv {
+  background: var(--lsoft);
+}
+
+#home[data-tab="lost"] .col.f,
+#home[data-tab="found"] .col.l {
+  display: none;
+}
+
+@media (min-width: 960px) {
+.tabs {
+    display: none;
+  }
+#cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+    padding: 24px 28px;
+  }
+#home .col {
+    display: block !important;
+    min-width: 0;
+  }
+#home .col.l {
+    padding-right: 24px;
+  }
+#home .col.f {
+    border-left: 1px solid var(--bd);
+    padding-left: 24px;
+  }
+.col .card {
+    margin-bottom: 16px;
+  }
+.post {
+    transition: box-shadow .15s, transform .15s;
+  }
+.post:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    transform: translateY(-2px);
+  }
+}
+
+.ph { grid-template-columns: minmax(0, 1fr); }
+
+.ph { height:auto; }
+
+.ph.noimg { height:200px; }
+
+.ph .gallery { height:auto; align-items:center; }
+
+.ph .gallery img { height:auto; max-height:480px; object-fit:contain; cursor:pointer; }
+
+.post { cursor:pointer; }
+
+.post .post-desc-bg p { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+.more { display:block; margin:0 0 8px; padding:0; border:0; background:none; cursor:pointer;
+          font:inherit; font-size:.88rem; font-weight:600; color:var(--pri-ink); }
+
+.more:hover { text-decoration:underline; }
+
+.st { display:inline-block; font-size:.78rem; font-weight:700; padding:2px 10px; border-radius:20px; margin-bottom:8px; }
+
+.st.pending { background:#fdebc8; color:#8a5a00; }
+
+.st.granted { background:#dcefd2; color:#2f6b1f; }
