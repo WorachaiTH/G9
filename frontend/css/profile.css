@@ -1,0 +1,18 @@
+.nav-avatar {
+  border: 0;
+  background: none;
+  padding: 0;
+  border-radius: 50%;
+  line-height: 0;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+
+.nav-avatar svg {
+  display: block;
+}
+
+.nav-avatar:hover,
+.nav-avatar.active {
+  box-shadow: 0 0 0 3px #efe2cf;
+}
