@@ -64,7 +64,8 @@ export function openDetail(index) {
       <div class="dm-info">
       <div class="post-desc-bg"><p><b>${esc(p.desc)}</b></p></div>
       <div class="meta">${isLost ? 'หายที่' : 'พบที่'}: ${esc(p.place)}</div>
-      <div class="meta">เวลา: ${esc(p.time)}</div>
+      ${p.timeRange ? `<div class="meta">ช่วงเวลาที่${isLost ? 'ทำหาย' : 'พบ'}: ${esc(p.timeRange)}</div>` : ''}
+      <div class="meta">โพสต์เมื่อ: ${esc(p.time)}</div>
       ${purgeNote(p) ? `<div class="meta">${esc(purgeNote(p))}</div>` : ''}
       <div class="dm-contact"${p.status === 'granted' || isOwner(p) ? ' hidden' : ''}>
         <button type="button" class="ct dm-ctbtn">ติดต่อเจ้าของโพสต์</button>

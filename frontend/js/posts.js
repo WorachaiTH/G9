@@ -26,6 +26,8 @@ export function mapPostStatus(v) {
 
 export function normalizePost(post) {
   const isFound = String(post.type).toLowerCase() === 'found';
+  const timeFrom = post.timeFrom ? String(post.timeFrom).slice(0, 5) : '';
+  const timeTo = post.timeTo ? String(post.timeTo).slice(0, 5) : '';
   return {
     id: post.id,
     authorEmail: post.authorEmail || '',
@@ -43,6 +45,7 @@ export function normalizePost(post) {
     place: post.place || post.location || '',
     name: post.name || post.contactName || post.authorEmail || '',
     contact: post.contact || post.contactInfo || '',
+    timeRange: timeFrom && timeTo ? `${timeFrom}–${timeTo}` : '',
     time: post.createdAt
       ? new Date(post.createdAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
       : '',
