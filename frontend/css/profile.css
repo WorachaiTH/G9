@@ -16,3 +16,16 @@
 .nav-avatar.active {
   box-shadow: 0 0 0 3px #efe2cf;
 }
+
+body.pr-page {
+  background: #FBF7F0;         
+
+#profile {
+  --pr-ink: #3E2723;            
+  --pr-accent: #B85032;         
+  --pr-soft: #F3E2DC;           
+  max-width: 680px;
+  margin: 0 auto;               
+  color: var(--pr-ink);
+}
+}
