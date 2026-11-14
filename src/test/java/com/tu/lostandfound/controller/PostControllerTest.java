@@ -3,6 +3,7 @@ package com.tu.lostandfound.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tu.lostandfound.dto.PostResponseDto;
 import com.tu.lostandfound.dto.PostUpdateRequestDto;
+import com.tu.lostandfound.exception.ApiException;
 import com.tu.lostandfound.exception.GlobalExceptionHandler;
 import com.tu.lostandfound.model.Post;
 import com.tu.lostandfound.security.JwtService;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -21,7 +23,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -42,6 +46,10 @@ class PostControllerTest {
     @BeforeEach
     void setUp() {
         when(jwtService.parseEmployeeId("valid-token")).thenReturn("6500000001");
+        when(jwtService.employeeIdFromHeader("Bearer valid-token")).thenReturn("6500000001");
+        when(jwtService.requireEmployeeId(eq("Bearer valid-token"), anyString())).thenReturn("6500000001");
+        when(jwtService.requireEmployeeId(isNull(), anyString()))
+                .thenThrow(new ApiException(HttpStatus.UNAUTHORIZED, "unauthorized"));
     }
 
     @Test
