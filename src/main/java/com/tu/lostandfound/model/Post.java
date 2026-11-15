@@ -2,6 +2,7 @@ package com.tu.lostandfound.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +42,12 @@ public class Post {
     @Column(name = "found_at")
     private LocalDateTime dateTime;
 
+    @Column(name = "time_from")
+    private LocalTime timeFrom;
+
+    @Column(name = "time_to")
+    private LocalTime timeTo;
+
     @Column(name = "reporter_name", length = 100)
     private String contactName;
 
@@ -56,13 +63,16 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private PostStatus status = PostStatus.pending_review;
+    private PostStatus status = PostStatus.published;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "granted_at")
+    private LocalDateTime grantedAt;
 
     @OneToMany(mappedBy = "post", fetch = FetchType.EAGER)
     @OrderBy("sortOrder ASC")
@@ -100,6 +110,12 @@ public class Post {
     public LocalDateTime getDateTime() { return dateTime; }
     public void setDateTime(LocalDateTime dateTime) { this.dateTime = dateTime; }
 
+    public LocalTime getTimeFrom() { return timeFrom; }
+    public void setTimeFrom(LocalTime timeFrom) { this.timeFrom = timeFrom; }
+
+    public LocalTime getTimeTo() { return timeTo; }
+    public void setTimeTo(LocalTime timeTo) { this.timeTo = timeTo; }
+
     public String getContactName() { return contactName; }
     public void setContactName(String contactName) { this.contactName = contactName; }
 
@@ -120,6 +136,9 @@ public class Post {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public LocalDateTime getGrantedAt() { return grantedAt; }
+    public void setGrantedAt(LocalDateTime grantedAt) { this.grantedAt = grantedAt; }
 
     public List<PostImage> getImages() { return images; }
 }
