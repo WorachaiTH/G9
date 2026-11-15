@@ -27,6 +27,13 @@
           <label for="loc" id="locL"></label>
           <input id="loc" placeholder="เช่น โรงอาหารsc, ตึกsc1 ห้อง1001">
           <div class="err" id="eLoc"></div>
+          <label for="timeFrom">ช่วงเวลาที่ทำหาย/พบ (ถ้าทราบ)</label>
+          <div class="time-range">
+            <input id="timeFrom" type="time" aria-label="เวลาเริ่มต้น">
+            <span>ถึง</span>
+            <input id="timeTo" type="time" aria-label="เวลาสิ้นสุด">
+          </div>
+          <div class="err" id="eTimeRange"></div>
         </div>
 
         <div class="card c3">

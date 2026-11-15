@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -102,5 +103,23 @@ class PostSearchRepositoryTest {
 
         assertEquals(2, result.size());
         assertTrue(result.stream().noneMatch(p -> p.getStatus() == Post.PostStatus.returned));
+    }
+
+    @Test // TC-DAO-18
+    void findByStatusAndGrantedAtBefore_returnsOnlyExpiredReturnedPosts() {
+        LocalDateTime now = LocalDateTime.now();
+
+        Post old = savePost("เก่า", "รายละเอียด", "ตึก SC", Post.PostStatus.returned);
+        old.setGrantedAt(now.minusDays(31));
+        Post recent = savePost("ใหม่", "รายละเอียด", "ตึก SC", Post.PostStatus.returned);
+        recent.setGrantedAt(now.minusDays(5));
+        Post open = savePost("เปิดอยู่", "รายละเอียด", "ตึก SC", Post.PostStatus.published);
+        open.setGrantedAt(now.minusDays(40));
+        em.flush();
+
+        List<Post> result = repo.findByStatusAndGrantedAtBefore(Post.PostStatus.returned, now.minusDays(30));
+
+        assertEquals(1, result.size());
+        assertEquals("เก่า", result.get(0).getTitle());
     }
 }

@@ -1,8 +1,8 @@
 package com.tu.lostandfound.controller;
 
-import com.tu.lostandfound.dto.ClaimCreateRequestDto;
-import com.tu.lostandfound.dto.ClaimResponseDto;
-import com.tu.lostandfound.exception.ApiException;
+import com.tu.lostandfound.dto.ClaimDto;
+import com.tu.lostandfound.dto.ClaimRequest;
+import com.tu.lostandfound.dto.PostDto;
 import com.tu.lostandfound.security.JwtService;
 import com.tu.lostandfound.service.ClaimService;
 import org.springframework.http.HttpStatus;
@@ -14,8 +14,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
+@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class ClaimController {
+
+    private static final String LOGIN_MESSAGE = "กรุณาเข้าสู่ระบบใหม่";
+
     private final ClaimService claimService;
     private final JwtService jwtService;
 
@@ -24,45 +28,42 @@ public class ClaimController {
         this.jwtService = jwtService;
     }
 
-    @PostMapping(value = "/api/posts/{id}/claims", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ClaimResponseDto> createClaim(
+    @PostMapping(value = "/posts/{postId}/claims", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ClaimDto> submitClaim(
             @RequestHeader(value = "Authorization", required = false) String authorization,
-            @PathVariable Long id,
-            @RequestPart("req") ClaimCreateRequestDto request,
+            @PathVariable Long postId,
+            @RequestPart(value = "claim", required = false) ClaimRequest request,
             @RequestPart(value = "photos", required = false) MultipartFile[] photos) {
-        String employeeId = requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนส่งคำขอ");
-        return ResponseEntity.status(HttpStatus.CREATED).body(claimService.create(id, request, photos, employeeId));
+
+        String employeeId = jwtService.requireEmployeeId(authorization, LOGIN_MESSAGE);
+        ClaimDto claim = claimService.submit(postId, employeeId, request, photos);
+        return ResponseEntity.status(HttpStatus.CREATED).body(claim);
     }
 
-    @GetMapping("/api/posts/{id}/claims")
-    public List<ClaimResponseDto> getClaims(
+    @GetMapping("/posts/{postId}/claims")
+    public List<ClaimDto> listClaims(
             @RequestHeader(value = "Authorization", required = false) String authorization,
-            @PathVariable Long id) {
-        return claimService.listForPost(id, requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนดูคำขอ"));
+            @PathVariable Long postId) {
+
+        String employeeId = jwtService.requireEmployeeId(authorization, LOGIN_MESSAGE);
+        return claimService.listForOwner(postId, employeeId);
     }
 
-    @PostMapping("/api/claims/{claimId}/confirm")
-    public ResponseEntity<Void> confirmClaim(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
-            @PathVariable Long claimId) {
-        claimService.confirm(claimId, requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนยืนยันคำขอ"));
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/api/claims/{claimId}/reject")
-    public ResponseEntity<Void> rejectClaim(
+    @PostMapping("/claims/{claimId}/confirm")
+    public PostDto confirmClaim(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable Long claimId) {
-        claimService.reject(claimId, requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนปฏิเสธคำขอ"));
-        return ResponseEntity.noContent().build();
+
+        String employeeId = jwtService.requireEmployeeId(authorization, LOGIN_MESSAGE);
+        return claimService.confirm(claimId, employeeId);
     }
 
-    private String requireEmployeeId(String authorization, String message) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, message);
-        }
-        String employeeId = jwtService.parseEmployeeId(authorization.substring(7));
-        if (employeeId == null) throw new ApiException(HttpStatus.UNAUTHORIZED, message);
-        return employeeId;
+    @PostMapping("/claims/{claimId}/reject")
+    public ClaimDto rejectClaim(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable Long claimId) {
+
+        String employeeId = jwtService.requireEmployeeId(authorization, LOGIN_MESSAGE);
+        return claimService.reject(claimId, employeeId);
     }
 }
