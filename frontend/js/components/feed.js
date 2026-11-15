@@ -1,6 +1,7 @@
 import { $, esc } from '../utils.js';
 import { API_BASE_URL, ICONS, SESSION_TOKEN_KEY } from '../config.js';
 import { posts, statusBadge, purgeNote, normalizePost } from '../posts.js';
+import { hasActiveFilters, matchesFilters } from './filter.js';
 // สลับtab ของหาย/เจอของ
 export let tab = 'lost';
 let listMode = 'all';
@@ -27,7 +28,8 @@ export function postCard(p, index) {
           <p><b>${esc(p.desc)}</b></p>
         </div>
         <div class="meta">${isLost ? 'หายที่' : 'พบที่'}: ${esc(p.place)}</div>
-        <div class="meta">เวลา: ${esc(p.time)}</div>
+        ${p.timeRange ? `<div class="meta">ช่วงเวลาที่${isLost ? 'ทำหาย' : 'พบ'}: ${esc(p.timeRange)}</div>` : ''}
+        <div class="meta">โพสต์เมื่อ: ${esc(p.time)}</div>
         ${purgeNote(p) ? `<div class="meta">${esc(purgeNote(p))}</div>` : ''}
         <button type="button" class="ct">ดูเพิ่มเติม</button>
       </div>
@@ -77,11 +79,11 @@ export function render() {
     $('navHome')?.classList.toggle('active', listMode === 'all');
   }
   [['lost', 'L'], ['found', 'F']].forEach(([kind, key]) => {
-    const items = visible.filter((x) => x.p.type === kind);
+    const items = visible.filter((x) => x.p.type === kind && matchesFilters(x.p));
 
     $('feed' + key).innerHTML =
       items.map((x) => postCard(x.p, x.index)).join('') ||
-      '<p class="meta">ยังไม่มีรายการ</p>';
+      `<p class="meta">${hasActiveFilters() ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ยังไม่มีรายการ'}</p>`;
     $('n' + key).textContent = items.length;
   });
 

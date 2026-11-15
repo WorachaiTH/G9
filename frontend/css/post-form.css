@@ -3,6 +3,17 @@ textarea {
   resize: vertical;
 }
 
+.time-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.time-range input {
+  min-width: 0;
+}
+
 .drop {
   border: 2px dashed var(--bd);
   border-radius: 12px;
