@@ -47,6 +47,16 @@ public class PostController {
         return postService.search(q, status, viewerId);
     }
 
+    @GetMapping("/mine")
+    public List<PostDto> getMyPosts(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Post.PostStatus status) {
+
+        String employeeId = jwtService.requireEmployeeId(authorization, "กรุณาเข้าสู่ระบบก่อนดูโพสต์ของฉัน");
+        return postService.listMine(employeeId, q, status);
+    }
+
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public PostDto updatePost(
             @RequestHeader(value = "Authorization", required = false) String authorization,

@@ -40,4 +40,18 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Optional<Post> findByIdForUpdate(@Param("id") Long id);
 
     List<Post> findByStatusAndGrantedAtBefore(Post.PostStatus status, LocalDateTime cutoff);
+
+    @Query("""
+            select p from Post p
+            where p.authorEmail = :authorId
+              and (:status is null or p.status = :status)
+              and (:pattern is null
+                or lower(p.title) like :pattern escape '!'
+                or lower(p.description) like :pattern escape '!'
+                or lower(p.location) like :pattern escape '!')
+            order by p.createdAt desc
+            """)
+    List<Post> findMine(@Param("authorId") String authorId,
+                        @Param("pattern") String pattern,
+                        @Param("status") Post.PostStatus status);
 }
