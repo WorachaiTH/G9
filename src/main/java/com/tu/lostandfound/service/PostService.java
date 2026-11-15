@@ -97,6 +97,9 @@ public class PostService {
         if (isBlank(post.getLocation()) || isBlank(post.getContactInfo())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "กรุณากรอกสถานที่และช่องทางติดต่อ");
         }
+        if ((post.getTimeFrom() == null) != (post.getTimeTo() == null)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "กรุณาระบุเวลาเริ่มต้นและสิ้นสุดให้ครบ");
+        }
 
         if (isBlank(post.getTitle()) && isBlank(post.getDescription())) {
             post.setTitle("รายการของหาย/พบของ");

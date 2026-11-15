@@ -1,0 +1,42 @@
+<section class="post-filters" aria-label="ตัวกรองรายการโพสต์">
+  <div class="filter-heading">
+    <button type="button" id="toggleFilterBtn" class="filter-toggle" aria-expanded="true" aria-controls="filterPanel">
+      <span>ตัวกรอง</span>
+      <span id="filterArrow" aria-hidden="true">▲</span>
+    </button>
+    <p id="filterSummary" class="filter-summary" aria-live="polite">ยังไม่ได้เลือกตัวกรอง</p>
+  </div>
+
+  <div id="filterPanel" class="filter-panel">
+    <div class="filter-grid">
+      <section class="filter-group" aria-labelledby="itemFilterHeading">
+        <div class="filter-group-heading">
+          <h2 id="itemFilterHeading">สิ่งของ</h2>
+          <form id="addItemForm" class="filter-add">
+            <label class="sr-only" for="newItemInput">เพิ่มประเภทสิ่งของ</label>
+            <input id="newItemInput" type="text" maxlength="60" placeholder="เพิ่มสิ่งของ...">
+            <button type="submit">+ เพิ่ม</button>
+          </form>
+        </div>
+        <div id="itemList" class="filter-chips" aria-label="เลือกสิ่งของ"></div>
+      </section>
+
+      <section class="filter-group" aria-labelledby="locationFilterHeading">
+        <div class="filter-group-heading">
+          <h2 id="locationFilterHeading">สถานที่</h2>
+          <form id="addLocationForm" class="filter-add">
+            <label class="sr-only" for="newLocationInput">เพิ่มสถานที่</label>
+            <input id="newLocationInput" type="text" maxlength="80" placeholder="เพิ่มสถานที่...">
+            <button type="submit">+ เพิ่ม</button>
+          </form>
+        </div>
+        <div id="locationList" class="filter-chips location-chips" aria-label="เลือกสถานที่"></div>
+      </section>
+    </div>
+
+    <div class="filter-actions">
+      <button type="button" id="clearFilterBtn" class="filter-clear">ล้างตัวกรอง</button>
+      <button type="button" id="applyFilterBtn" class="filter-apply">ค้นหา / กรองข้อมูล</button>
+    </div>
+  </div>
+</section>
