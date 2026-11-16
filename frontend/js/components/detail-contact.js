@@ -23,7 +23,7 @@ export function setupContactForm(dm, p, authHeaders) {
     btn.disabled = true;
     try {
       const fd = new FormData();
-      fd.append('req', new Blob([JSON.stringify({ contactName, contactInfo })], { type: 'application/json' }));
+      fd.append('claim', new Blob([JSON.stringify({ contactName, contactInfo })], { type: 'application/json' }));
       pics.forEach((x) => fd.append('photos', x.file));
       const response = await fetch(`${API_BASE_URL}/posts/${p.id}/claims`, {
         method: 'POST',

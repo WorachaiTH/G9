@@ -1,5 +1,5 @@
 import { $, esc } from '../utils.js';
-import { API_BASE_URL, ICONS } from '../config.js';
+import { API_BASE_URL, ICONS, SESSION_TOKEN_KEY } from '../config.js';
 import { posts, statusBadge, purgeNote, normalizePost } from '../posts.js';
 import { hasActiveFilters, matchesFilters } from './filter.js';
 // สลับtab ของหาย/เจอของ
@@ -36,7 +36,10 @@ export function postCard(p, index) {
 
 export async function loadPosts() {
   try {
-    const response = await fetch(`${API_BASE_URL}/posts`);
+    const token = localStorage.getItem(SESSION_TOKEN_KEY);
+    const response = await fetch(`${API_BASE_URL}/posts`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!response.ok) throw new Error(`โหลดโพสต์ไม่สำเร็จ (${response.status})`);
     const data = await response.json();
     if (!Array.isArray(data)) throw new Error('รูปแบบข้อมูลโพสต์จาก backend ไม่ถูกต้อง');
