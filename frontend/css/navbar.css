@@ -43,6 +43,33 @@
   gap: 8px;
 }
 
+.nav-views {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 16px 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.nav-view {
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nav-view.active,
+.nav-view:hover {
+  background: var(--field);
+  color: var(--pri);
+}
+
 .nav-link {
   background: none;
   border: none;

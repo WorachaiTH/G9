@@ -2,8 +2,7 @@ import { $, esc } from '../utils.js';
 import { API_BASE_URL, ICONS } from '../config.js';
 import { posts, statusBadge, purgeNote, normalizePost } from '../posts.js';
 import { hasActiveFilters, matchesFilters } from './filter.js';
-// สลับtab ของหาย/เจอของ
-export let tab = 'lost';
+export let tab = 'all';
 
 export function postCard(p, index) {
   const isLost = p.type === 'lost';
@@ -45,8 +44,10 @@ export async function loadPosts() {
     return true;
   } catch (error) {
     const message = error.message || 'เกิดข้อผิดพลาดขณะโหลดโพสต์';
-    $('feedL').innerHTML = `<p class="meta">${esc(message)}</p>`;
-    $('feedF').innerHTML = `<p class="meta">${esc(message)}</p>`;
+    ['feedL', 'feedF'].forEach((id) => {
+      $(id).classList.remove('has-scroll');
+      $(id).innerHTML = `<p class="meta">${esc(message)}</p>`;
+    });
     $('nL').textContent = '—';
     $('nF').textContent = '—';
     return false;
@@ -58,7 +59,9 @@ export function render() {
   [['lost', 'L'], ['found', 'F']].forEach(([kind, key]) => {
     const items = visible.filter((x) => x.p.type === kind && matchesFilters(x.p));
 
-    $('feed' + key).innerHTML =
+    const feed = $('feed' + key);
+    feed.classList.toggle('has-scroll', items.length >= 5);
+    feed.innerHTML =
       items.map((x) => postCard(x.p, x.index)).join('') ||
       `<p class="meta">${hasActiveFilters() ? 'ไม่พบรายการที่ตรงกับตัวกรอง' : 'ยังไม่มีรายการ'}</p>`;
     $('n' + key).textContent = items.length;
@@ -81,9 +84,14 @@ export function render() {
 }
 
 export function setTab(t) {
+  if (!['all', 'lost', 'found'].includes(t)) {
+    throw new RangeError(`มุมมองรายการโพสต์ไม่ถูกต้อง: ${t}`);
+  }
   tab = t;
   $('home').dataset.tab = t;
-  $('tL').className = t === 'lost' ? 'on l' : ''; $('tF').className = t === 'found' ? 'on' : '';
+  [['navViewAll', 'all'], ['navViewLost', 'lost'], ['navViewFound', 'found']].forEach(([id, value]) => {
+    const button = $(id);
+    button.classList.toggle('active', t === value);
+    button.setAttribute('aria-pressed', String(t === value));
+  });
 }
-
-$('tL').onclick = () => setTab('lost'); $('tF').onclick = () => setTab('found');
