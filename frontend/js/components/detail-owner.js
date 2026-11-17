@@ -46,13 +46,16 @@ export function setupOwnerMenu(dm, p, authHeaders) {
       renderEditImages();
     };
 
-    menu.querySelector('[data-act="edit"]').onclick = () => {
-      menu.hidden = true;
-      renderEditImages();
-      view.hidden = true;
-      edit.hidden = false;
-      dm.querySelector('#edDesc').focus();
-    };
+    const editBtn = menu.querySelector('[data-act="edit"]');
+    if (editBtn) {
+      editBtn.onclick = () => {
+        menu.hidden = true;
+        renderEditImages();
+        view.hidden = true;
+        edit.hidden = false;
+        dm.querySelector('#edDesc').focus();
+      };
+    }
     dm.querySelector('.dm-ecancel').onclick = () => { resetEdit(); edit.hidden = true; view.hidden = false; };
 
     edImgs.onclick = (e) => {
@@ -115,7 +118,7 @@ export function setupOwnerMenu(dm, p, authHeaders) {
       e.target.disabled = true;
       try {
         const fd = new FormData();
-        fd.append('request', new Blob([JSON.stringify({
+        fd.append('post', new Blob([JSON.stringify({
           type: p.type,
           title: v.desc.slice(0, 100),
           description: v.desc,

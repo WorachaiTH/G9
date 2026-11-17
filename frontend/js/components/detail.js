@@ -49,7 +49,7 @@ export function openDetail(index) {
         </div>
         ${isOwner(p) ? `
         <div class="dm-menu" hidden>
-          <button type="button" data-act="edit">แก้ไขโพสต์</button>
+          ${p.status === 'open' ? '<button type="button" data-act="edit">แก้ไขโพสต์</button>' : ''}
           <button type="button" data-act="del" class="danger">ลบโพสต์</button>
         </div>
         ` : ''}
@@ -67,7 +67,7 @@ export function openDetail(index) {
       ${p.timeRange ? `<div class="meta">ช่วงเวลาที่${isLost ? 'ทำหาย' : 'พบ'}: ${esc(p.timeRange)}</div>` : ''}
       <div class="meta">โพสต์เมื่อ: ${esc(p.time)}</div>
       ${purgeNote(p) ? `<div class="meta">${esc(purgeNote(p))}</div>` : ''}
-      <div class="dm-contact"${p.status === 'granted' || isOwner(p) ? ' hidden' : ''}>
+      <div class="dm-contact"${p.status !== 'open' || p.type !== 'found' || isOwner(p) ? ' hidden' : ''}>
         <button type="button" class="ct dm-ctbtn">ติดต่อเจ้าของโพสต์</button>
         <div class="dm-form" hidden>
           <label for="dmName">ชื่อ</label>

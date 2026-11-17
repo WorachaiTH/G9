@@ -80,7 +80,6 @@ import { show } from '../views.js';
   
   async function loadMine() {
     const mySeq = ++seq;
-    const id = currentProfile().employeeId;
     const token = localStorage.getItem(SESSION_TOKEN_KEY);
     if (!token) {
       phase = 'error';
@@ -92,7 +91,7 @@ import { show } from '../views.js';
     phase = 'loading';
     renderFeed();
     try {
-      const response = await fetch(`${API_BASE_URL}/posts`, {
+      const response = await fetch(`${API_BASE_URL}/posts/mine`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (mySeq !== seq) return;
@@ -102,9 +101,7 @@ import { show } from '../views.js';
       const data = await response.json();
       if (mySeq !== seq) return;
       if (!Array.isArray(data)) throw new Error('รูปแบบข้อมูลโพสต์จาก backend ไม่ถูกต้อง');
-      mine = id
-        ? data.filter((p) => String(p.authorEmail || '') === id).map(normalizePost)
-        : [];
+      mine = data.map(normalizePost);
       phase = 'ready';
     } catch (error) {
       if (mySeq !== seq) return;
