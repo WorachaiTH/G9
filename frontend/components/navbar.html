@@ -1,0 +1,34 @@
+<svg class="icon-sprite" aria-hidden="true">
+  <symbol id="ic-avatar" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="4"></circle>
+    <path d="M4 21a8 8 0 0 1 16 0"></path>
+  </symbol>
+</svg>
+<nav id="app-nav" class="navbar" hidden>
+    <div class="nav-container">
+      <div class="nav-brand">
+        <img class="nav-logo" src="./image/logo.PNG" alt="Lost and Found">
+        <span>Lost & Found</span>
+      </div>
+      <div class="nav-menu">
+        <button type="button" class="nav-link active" id="navHome">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5a.5.5 0 0 0 .5.5h4v-5.5h4V20h4a.5.5 0 0 0 .5-.5V10"/></svg>
+  หน้าหลัก
+</button>
+        <button type="button" class="nav-link" id="navAdd">＋ เพิ่มโพสต์</button>
+      </div>
+      <div class="nav-user">
+        <span id="who" class="user-email"></span>
+        <button id="navProfile" class="nav-avatar" type="button" aria-label="โปรไฟล์และโพสต์ของฉัน"
+          title="โปรไฟล์ของฉัน">
+          <svg width="34" height="34" aria-hidden="true"><use href="#ic-avatar"></use></svg>
+        </button>
+        <button id="logout" class="logout-btn" type="button">ออกจากระบบ</button>
+      </div>
+    </div>
+    <div class="nav-views" role="group" aria-label="เลือกมุมมองรายการโพสต์">
+      <button id="navViewAll" class="nav-view active" type="button" aria-pressed="true">ทั้งหมด</button>
+      <button id="navViewLost" class="nav-view" type="button" aria-pressed="false">ของที่หาย</button>
+      <button id="navViewFound" class="nav-view" type="button" aria-pressed="false">ของที่พบ</button>
+    </div>
+  </nav>
