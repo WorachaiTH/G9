@@ -36,6 +36,14 @@ export async function errorText(response, fallback, overrides = {}) {
     404: 'ไม่พบข้อมูล (อาจถูกลบไปแล้ว)',
     409: 'ทำรายการไม่ได้ เพราะสถานะเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า',
   };
+  if (response.status === 401) {
+    try {
+      const { show } = await import('./views.js');
+      show('login');
+    } catch {
+      document.dispatchEvent(new CustomEvent('viewchange', { detail: 'login' }));
+    }
+  }
   if (response.status === 400 && detail) return detail;
   return overrides[response.status] || byStatus[response.status] || detail || fallback;
 }
